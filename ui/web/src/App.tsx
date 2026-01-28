@@ -1,6 +1,7 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom'
-import { InputPage, PreprocessingPage, AnalysisPage, InferencePage } from './pages/workflow'
+import { ComprehensiveInputPage } from './pages/workflow/ComprehensiveInput'
+import { PreprocessingPage, AnalysisPage, InferencePage } from './pages/workflow'
 import { OverviewPage, LabsPage, KeyLegendPage } from './pages/results'
 import { useWorkflow } from './hooks/useWorkflow'
 
@@ -83,7 +84,7 @@ export default function App() {
 
         <Routes>
           {/* Workflow Pages */}
-          <Route path="/workflow/input" element={<InputPage />} />
+          <Route path="/workflow/input" element={<ComprehensiveInputPage />} />
           <Route path="/workflow/preprocessing" element={<PreprocessingPage />} />
           <Route path="/workflow/analysis" element={<AnalysisPage />} />
           <Route path="/workflow/inference" element={<InferencePage />} />
