@@ -100,6 +100,75 @@ A FastAPI-based backend for sensor data ingestion, preprocessing, and ML inferen
 - **Backward Compatibility**: All existing 37 tests pass unchanged; legacy `/data/raw` works identically
 - **Status**: ✓ Code complete, ✓ Tests passing (13/13), ✓ Backward compatible
 
+---
+
+### Milestone 7 Phase 3 Part 2: Preprocess V2 + Coherence/Motif Features (Non-Breaking)
+- **Objective**: Transform RunV2 multi-specimen data into missingness-aware features with cross-specimen coherence scoring and pattern detection
+- **What's New**:
+  - **Feature Pack V2 Schema** (`app/models/feature_pack_v2.py`):
+    - FeaturePackV2: complete output structure with 8 major output sections
+    - MissingnessFeatureVector: per-variable + per-domain missingness tracking; critical anchor flags
+    - SpecimenNormalizedValues: z-score normalization per specimen with reference tracking
+    - DerivedTemporalFeatures: intra-specimen temporal windows, rates-of-change, trend slopes
+    - CrossSpecimenRelationships: lag kinetics (ISF→Blood), conservation checks (mass balance), proxy triangulation, artifact/interference detection
+    - PatternCombinationFeatures: motif detection (glucose_lactate_up_exertion, glucose_lactate_up_meal, dehydration_stress, inflammatory_sleep_fragmentation), regime detection (rest, exertion, postprandial, sleep), discordance detection
+    - CoherenceScores: overall_coherence_0_1, domain_coherence_map, driver_factors, temporal_alignment scores
+    - PenaltyVector: penalty_factors list, domain_blockers list (conditions that gate inference eligibility)
+  - **Missingness-Aware Feature Construction** (`app/features/missingness_features.py`):
+    - Per-variable present/missing flags for all specimens
+    - One-hot encoding of missing types (not_collected, user_skipped, biologically_unavailable, etc.)
+    - Domain-level aggregation: metabolic, renal, electrolyte, hydration, liver, lipid, endocrine, vitamins, inflammation, autoimmune, hematology
+    - Critical anchor detection per domain (e.g., glucose for metabolic, creatinine for renal)
+    - Aggregate missingness score 0-1
+  - **Cross-Specimen Relationship Modeling** (`app/features/cross_specimen_modeling.py`):
+    - **Lag Kinetics**: Model glucose/lactate transitions from ISF → Blood; compute lag times, diffusion delays, kinetic constants
+    - **Conservation & Plausibility**: Check mass balance (sodium in/out), osmolarity conservation, protein conservation
+    - **Proxy Triangulation**: When same analyte measured in 2+ specimens, detect inconsistencies; assign confidence weights
+    - **Artifact & Interference**: Detect hemolysis (from blood CBC spike), contamination patterns, sensor drift from consecutive readings
+  - **Pattern/Combination Features** (`app/features/pattern_features.py`):
+    - **Temporal Windows**: Intra-specimen sliding windows (30min, 1h, 2h) for trend detection
+    - **Motif Detection**: Named metabolic patterns (glucose_lactate_up_exertion, dehydration_stress, etc.)
+    - **Regime Detection**: Classify activity state (rest, exertion, postprandial, sleep) from feature patterns
+    - **Discordance Detection**: Identify specimen disagreements with explanations (e.g., "blood_glucose_150_but_isf_glucose_85" → possible lag or measurement error)
+  - **Main Orchestrator** (`app/features/preprocess_v2.py`):
+    - preprocess_v2(run_v2) → FeaturePackV2
+    - Flow: missingness_vectors → normalized_values → temporal_features → cross_specimen_rels → pattern_features → discordance → coherence_scores → penalty_vector
+    - Non-breaking: produces feature_pack_v2 JSON for storage
+  - **API Endpoint**:
+    - `POST /ai/preprocess-v2`: Accepts run_id from completed RunV2 → computes feature_pack_v2 → stores in CalibratedFeatures.feature_pack_v2 (JSON column)
+    - Response: calibrated_id, run_v2_id, schema_version, overall_coherence_0_1, specimen_count, domains_present, penalty_factors, domain_blockers
+  - **DB Storage (Non-Breaking)**:
+    - Added feature_pack_v2 JSON column to CalibratedFeatures
+    - Added run_v2_id string column to link RunV2 records
+    - Legacy columns (feature_1/2/3, derived_metric) untouched for backward compat
+- **Domain Definitions** (11 domains with critical anchors):
+  - Metabolic: glucose (critical anchor), lactate, pyruvate, alanine
+  - Renal: creatinine (critical), BUN, eGFR
+  - Electrolyte: sodium (critical), potassium (critical), chloride, CO2
+  - Hydration: osmolarity, specific_gravity, hydration_index
+  - Liver: AST, ALT, bilirubin (critical), albumin
+  - Lipid: cholesterol, HDL, LDL, triglycerides (critical)
+  - Endocrine: glucose (cross-link), TSH, free_T4, cortisol (critical)
+  - Vitamins: B12, folate, vitamin_D
+  - Inflammation: CRP (critical), IL-6, TNF-alpha
+  - Autoimmune: ANA, rheumatoid_factor, complement
+  - Hematology: WBC (critical), hemoglobin (critical), platelets
+- **Coherence Scoring Components**:
+  - Specimen agreement (triangulation consistency)
+  - Domain continuity (no contradictions across specimen pair)
+  - Temporal alignment (time differences consistent with known kinetics)
+  - Provenance confidence (measured > proxy > inferred)
+  - Missingness penalty (high missingness reduces coherence)
+- **Tests**: ~22 new tests in `tests/test_feature_pack_v2.py` covering:
+  - Missingness vectors (complete vs. minimal data)
+  - Cross-specimen relationships (lag, conservation, triangulation, artifact)
+  - Pattern detection (temporal, motifs, regime, discordance)
+  - Full E2E: RunV2 → preprocess_v2 → feature_pack_v2
+  - API endpoint (complete flow, error handling)
+  - Backward compatibility (legacy features untouched)
+- **Backward Compatibility**: feature_pack_v2 stored alongside legacy features; zero breaking changes
+- **Status**: ✓ Code complete, ✓ Models created, ✓ API endpoint added, ✓ Tests created (pending run validation), ✓ Backward compatible
+
 
 ## Quick Start
 
@@ -369,7 +438,141 @@ Option 2: Using `feature_values` (legacy backward compatibility):
 
 ---
 
-#### **POST /reports/pdf** - Generate PDF report (M5)
+#### **POST /ai/preprocess-v2** - Preprocess RunV2 to feature_pack_v2 (M7 Part 2)
+**Authentication**: Required (Bearer token)
+
+**Request**: 
+```json
+{
+  "run_id": "uuid-from-runv2-creation"
+}
+```
+
+**Response**: PreprocessV2Response with coherence scores and penalty factors
+```json
+{
+  "calibrated_id": 42,
+  "run_v2_id": "uuid-from-runv2-creation",
+  "feature_pack_v2_schema_version": "v2",
+  "overall_coherence_0_1": 0.82,
+  "specimen_count": 3,
+  "domains_present": ["metabolic", "hematology", "electrolyte", "inflammation"],
+  "penalty_factors": ["high_isf_glucose_missingness", "blood_specimen_delay_2h"],
+  "domain_blockers": [],
+  "created_at": "2024-01-28T10:45:00"
+}
+```
+
+**Feature Pack V2 Structure** (stored as JSON in CalibratedFeatures.feature_pack_v2):
+```json
+{
+  "run_id": "uuid",
+  "schema_version": "v2",
+  "specimen_count": 3,
+  "domains_present": ["metabolic", "hematology"],
+  "missingness_feature_vector": {
+    "specimen_variable_present_flags": {
+      "isf_01": {"glucose": true, "lactate": true, "pyruvate": false}
+    },
+    "domain_missingness_scores": {"metabolic": 0.1, "hematology": 0.05},
+    "domain_critical_missing_flags": {"metabolic": false, "hematology": false},
+    "aggregate_missingness_0_1": 0.12
+  },
+  "specimen_normalized_values": [
+    {
+      "specimen_id": "isf_01",
+      "specimen_type": "ISF",
+      "normalized_values": {"glucose": 0.45, "lactate": -0.12},
+      "normalization_references_used": {"glucose": "population_mean", "lactate": "self_baseline"},
+      "value_validity_flags": {"glucose": true, "lactate": true}
+    }
+  ],
+  "cross_specimen_relationships": {
+    "specimen_count": 3,
+    "lag_kinetics_models": [
+      {
+        "source_specimen": "isf_01",
+        "target_specimen": "blood_01",
+        "analyte": "glucose",
+        "lag_minutes": 12.5,
+        "lag_confidence_0_1": 0.75,
+        "kinetic_constant": 0.15
+      }
+    ],
+    "conservation_plausibility_checks": [
+      {
+        "analyte": "sodium",
+        "check_type": "balance",
+        "is_plausible": true,
+        "deviation_mEq": 2.1
+      }
+    ],
+    "proxy_triangulation": [
+      {
+        "analyte": "glucose",
+        "specimens": ["isf_01", "blood_01"],
+        "agreement_score": 0.88,
+        "confidence_weights": [0.95, 0.85]
+      }
+    ],
+    "artifact_and_interference": {
+      "hemolysis_risk": 0.05,
+      "contamination_patterns": [],
+      "sensor_drift_indicators": []
+    }
+  },
+  "pattern_combination_features": {
+    "regime_detected": "postprandial",
+    "regime_confidence": 0.78,
+    "motifs_detected": ["glucose_lactate_up_meal"],
+    "motif_details": [
+      {
+        "motif_type": "glucose_lactate_up_meal",
+        "confidence": 0.75,
+        "constituent_signals": ["glucose↑", "lactate↑", "insulin_pending"],
+        "time_window_minutes": 120
+      }
+    ]
+  },
+  "discordance_detection": {
+    "specimen_pairs_analyzed": 3,
+    "discordances_found": [
+      {
+        "specimen_pair": ["blood_01", "isf_01"],
+        "analyte": "glucose",
+        "blood_value": 150,
+        "isf_value": 85,
+        "magnitude_mg_dL": 65,
+        "likely_cause": "2h lag unresolved + postprandial state",
+        "recommendation": "Use ISF for real-time; blood for integration verification"
+      }
+    ]
+  },
+  "coherence_scores": {
+    "overall_coherence_0_1": 0.82,
+    "domain_coherence_map": {
+      "metabolic": 0.85,
+      "electrolyte": 0.80,
+      "hematology": 0.78
+    },
+    "driver_factors": ["good_specimen_agreement", "adequate_coverage", "-10pts_for_missingness"],
+    "temporal_alignment_score": 0.84
+  },
+  "penalty_vector": {
+    "penalty_factors": [
+      "high_isf_glucose_missingness_-5pts",
+      "blood_specimen_delay_2h_-8pts"
+    ],
+    "domain_blockers": [],
+    "total_penalty_0_100": 13,
+    "inference_eligible": true
+  }
+}
+```
+
+---
+
+
 **Authentication**: Required (Bearer token)
 
 **Request**: Provide at least one identifier:

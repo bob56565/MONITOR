@@ -46,6 +46,10 @@ class CalibratedFeatures(Base):
     feature_3 = Column(Float, nullable=False)
     derived_metric = Column(Float, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # M7 Part 2: feature_pack_v2 storage (non-breaking)
+    feature_pack_v2 = Column(JSON, nullable=True)  # Stores FeaturePackV2 as JSON
+    run_v2_id = Column(String, nullable=True)  # Link to RunV2 if generated from it
 
     user = relationship("User", back_populates="calibrated_features")
 

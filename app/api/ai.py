@@ -256,3 +256,98 @@ def forecast_endpoint(
         confidence=result["confidence"],
         steps_ahead=result["steps_ahead"],
     )
+
+
+# ============================================================================
+# M7 Part 2: Preprocess V2 for RunV2 → feature_pack_v2
+# ============================================================================
+
+class PreprocessV2Request(BaseModel):
+    run_id: str  # From POST /runs/v2
+
+
+class PreprocessV2Response(BaseModel):
+    calibrated_id: int
+    run_v2_id: str
+    feature_pack_v2_schema_version: str
+    overall_coherence_0_1: float
+    specimen_count: int
+    domains_present: List[str]
+    penalty_factors: List[str]
+    domain_blockers: List[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+@router.post("/preprocess-v2", response_model=PreprocessV2Response, status_code=201)
+def preprocess_v2(
+    request: PreprocessV2Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Preprocess a RunV2 payload to generate feature_pack_v2.
+    
+    - Reads RunV2 from DB by run_id
+    - Computes feature_pack_v2 with missingness-aware features, cross-specimen relationships, patterns
+    - Stores feature_pack_v2 in CalibratedFeatures as optional JSON column
+    - Returns coherence scores and penalties for Phase 3 inference gating
+    
+    Non-breaking: Does not modify legacy features.
+    """
+    from app.models.run_v2 import RunV2Record
+    from app.features.preprocess_v2 import preprocess_v2
+    
+    # Load RunV2
+    db_run = db.query(RunV2Record).filter(
+        RunV2Record.run_id == request.run_id,
+        RunV2Record.user_id == current_user.id,
+    ).first()
+    
+    if not db_run:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"RunV2 {request.run_id} not found",
+        )
+    
+    # Reconstruct RunV2 from payload
+    run_v2_payload = db_run.payload
+    run_v2 = RunV2(**run_v2_payload)
+    
+    # Run preprocess_v2
+    try:
+        feature_pack_v2 = preprocess_v2(run_v2)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Feature pack v2 computation failed: {str(e)}",
+        )
+    
+    # Store in CalibratedFeatures (create a new record with feature_pack_v2 + legacy stubs)
+    cal_features = CalibratedFeatures(
+        user_id=current_user.id,
+        raw_sensor_id=db_run.legacy_raw_id,
+        feature_1=0.0,  # Legacy stubs (unused for v2 pathway)
+        feature_2=0.0,
+        feature_3=0.0,
+        derived_metric=0.0,
+        feature_pack_v2=feature_pack_v2.model_dump(mode="json"),
+        run_v2_id=run_v2.run_id,
+    )
+    db.add(cal_features)
+    db.commit()
+    db.refresh(cal_features)
+    
+    return PreprocessV2Response(
+        calibrated_id=cal_features.id,
+        run_v2_id=run_v2.run_id,
+        feature_pack_v2_schema_version=feature_pack_v2.schema_version,
+        overall_coherence_0_1=feature_pack_v2.coherence_scores.overall_coherence_0_1,
+        specimen_count=feature_pack_v2.specimen_count,
+        domains_present=feature_pack_v2.domains_present,
+        penalty_factors=feature_pack_v2.penalty_vector.penalty_factors,
+        domain_blockers=feature_pack_v2.penalty_vector.domain_blockers,
+        created_at=cal_features.created_at,
+    )
