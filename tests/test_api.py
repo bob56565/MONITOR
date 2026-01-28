@@ -331,8 +331,18 @@ class TestInference:
         assert response.status_code == 404
     
     def test_forecast(self):
+        # Now requires auth since endpoint needs to query DB for calibrated_id lookups
+        # Create a test user
+        email = generate_email()
+        signup_response = client.post(
+            "/auth/signup",
+            json={"email": email, "password": "password123"}
+        )
+        token = (signup_response.json().get("token") or signup_response.json().get("access_token"))
+        
         response = client.post(
             "/ai/forecast",
+            headers=auth_headers(token),
             json={
                 "feature_values": [1.0, 1.5, 2.0],
                 "steps_ahead": 1
@@ -347,8 +357,17 @@ class TestInference:
     
     def test_forecast_with_horizon_steps(self):
         """Test that horizon_steps parameter produces correct forecast list."""
+        # Create a test user
+        email = generate_email()
+        signup_response = client.post(
+            "/auth/signup",
+            json={"email": email, "password": "password123"}
+        )
+        token = (signup_response.json().get("token") or signup_response.json().get("access_token"))
+        
         response = client.post(
             "/ai/forecast",
+            headers=auth_headers(token),
             json={
                 "feature_values": [1.0, 1.5, 2.0],
                 "horizon_steps": 5
@@ -418,3 +437,151 @@ class TestEndToEnd:
         assert "trace_id" in inference_data
         assert "created_at" in inference_data
         assert "inferred" in inference_data
+
+
+class TestM4ContractUnification:
+    """Test Milestone 4: API Contract Unification for forecast and infer."""
+    
+    def setup_method(self):
+        """Create a user and preprocessed data for each test."""
+        email = generate_email()
+        response = client.post(
+            "/auth/signup",
+            json={"email": email, "password": "password123"}
+        )
+        self.user_id = response.json()["user_id"]
+        self.token = (response.json().get("token") or response.json().get("access_token"))
+        
+        # Ingest and preprocess
+        ingest_response = client.post(
+            "/data/raw",
+            headers=auth_headers(self.token),
+            json={
+                "timestamp": "2026-01-27T00:00:00Z",
+                "specimen_type": "blood",
+                "observed": {"glucose_mg_dl": 120.0, "lactate_mmol_l": 2.0},
+                "context": {"age": 30, "sex": "M", "fasting": False}
+            }
+        )
+        raw_id = ingest_response.json().get("raw_id") or ingest_response.json().get("id") or ingest_response.json().get("raw_sensor_data_id")
+        
+        preprocess_response = client.post(
+            "/data/preprocess",
+            headers=auth_headers(self.token),
+            json={"raw_id": raw_id}
+        )
+        self.calibrated_id = preprocess_response.json().get("calibrated_id") or preprocess_response.json().get("id") or preprocess_response.json().get("calibrated_features_id")
+    
+    def test_forecast_with_calibrated_id(self):
+        """Test forecast endpoint accepts calibrated_id and loads features from DB."""
+        response = client.post(
+            "/ai/forecast",
+            headers=auth_headers(self.token),
+            json={
+                "calibrated_id": self.calibrated_id,
+                "horizon_steps": 3
+            }
+        )
+        assert response.status_code in (200, 201)
+        data = response.json()
+        assert "forecast" in data
+        assert "forecasts" in data
+        assert len(data["forecasts"]) == 3
+        assert data["steps_ahead"] == 3
+        assert data["forecast"] == data["forecasts"][0]
+    
+    def test_forecast_with_feature_values(self):
+        """Test forecast endpoint still accepts feature_values (backward compat)."""
+        response = client.post(
+            "/ai/forecast",
+            headers=auth_headers(self.token),
+            json={
+                "feature_values": [1.0, 1.5, 2.0],
+                "horizon_steps": 2
+            }
+        )
+        assert response.status_code in (200, 201)
+        data = response.json()
+        assert "forecast" in data
+        assert "forecasts" in data
+        assert len(data["forecasts"]) == 2
+        assert data["steps_ahead"] == 2
+    
+    def test_forecast_calibrated_id_takes_precedence(self):
+        """Test that calibrated_id takes precedence over feature_values when both provided."""
+        response = client.post(
+            "/ai/forecast",
+            headers=auth_headers(self.token),
+            json={
+                "calibrated_id": self.calibrated_id,
+                "feature_values": [999.0, 999.0, 999.0],  # These should be ignored
+                "horizon_steps": 1
+            }
+        )
+        assert response.status_code in (200, 201)
+        data = response.json()
+        assert "forecast" in data
+    
+    def test_forecast_horizon_steps_overrides_steps_ahead(self):
+        """Test that horizon_steps takes precedence over steps_ahead."""
+        response = client.post(
+            "/ai/forecast",
+            headers=auth_headers(self.token),
+            json={
+                "feature_values": [1.0, 1.5, 2.0],
+                "steps_ahead": 1,
+                "horizon_steps": 4
+            }
+        )
+        assert response.status_code in (200, 201)
+        data = response.json()
+        assert data["steps_ahead"] == 4
+        assert len(data["forecasts"]) == 4
+    
+    def test_infer_with_calibrated_id(self):
+        """Test infer endpoint accepts calibrated_id."""
+        response = client.post(
+            "/ai/infer",
+            headers=auth_headers(self.token),
+            json={"calibrated_id": self.calibrated_id}
+        )
+        assert response.status_code in (200, 201)
+        data = response.json()
+        assert "trace_id" in data
+        assert "inferred" in data
+    
+    def test_infer_with_features_dict(self):
+        """Test infer endpoint accepts features dict (legacy)."""
+        response = client.post(
+            "/ai/infer",
+            headers=auth_headers(self.token),
+            json={
+                "features": {
+                    "feature_1": 1.0,
+                    "feature_2": 1.5,
+                    "feature_3": 2.0
+                }
+            }
+        )
+        assert response.status_code in (200, 201)
+        data = response.json()
+        assert "trace_id" in data
+        assert "inferred" in data
+    
+    def test_forecast_missing_both_ids_fails(self):
+        """Test forecast fails when neither calibrated_id nor feature_values provided."""
+        response = client.post(
+            "/ai/forecast",
+            headers=auth_headers(self.token),
+            json={"horizon_steps": 1}
+        )
+        assert response.status_code == 422
+    
+    def test_infer_missing_both_ids_fails(self):
+        """Test infer fails when neither calibrated_id nor features provided."""
+        response = client.post(
+            "/ai/infer",
+            headers=auth_headers(self.token),
+            json={}
+        )
+        assert response.status_code == 422

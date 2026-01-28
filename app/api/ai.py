@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 from datetime import datetime
 from typing import List, Optional
 import uuid
@@ -14,7 +14,14 @@ router = APIRouter(prefix="/ai", tags=["ai"])
 
 
 class InferenceRequest(BaseModel):
-    calibrated_id: int
+    calibrated_id: Optional[int] = None
+    features: Optional[dict] = None  # Legacy dev convenience field
+    
+    @model_validator(mode='after')
+    def check_at_least_one_id(self):
+        if not self.calibrated_id and not self.features:
+            raise ValueError("Either calibrated_id or features must be provided")
+        return self
 
 
 # Legacy response model (kept for backward compatibility if needed)
@@ -63,16 +70,29 @@ class InferenceReport(BaseModel):
 
 
 class ForecastRequest(BaseModel):
-    feature_values: list[float]
-    steps_ahead: int = 1
-    horizon_steps: int = 1
+    calibrated_id: Optional[int] = None
+    feature_values: Optional[list[float]] = None
+    steps_ahead: int = 1  # Legacy alias; can be overridden by horizon_steps
+    horizon_steps: Optional[int] = None  # Canonical; takes precedence if both provided
+    
+    @model_validator(mode='after')
+    def reconcile_steps_and_validate(self):
+        # Validate: at least one of calibrated_id or feature_values must be provided
+        if not self.calibrated_id and not self.feature_values:
+            raise ValueError("Either calibrated_id or feature_values must be provided")
+        
+        # Reconcile horizon_steps and steps_ahead: horizon_steps takes precedence
+        if self.horizon_steps is None:
+            self.horizon_steps = self.steps_ahead if self.steps_ahead else 1
+        self.horizon_steps = max(1, self.horizon_steps)
+        return self
 
 
 class ForecastResponse(BaseModel):
     forecast: float
     forecasts: List[float] = []
     confidence: float
-    steps_ahead: int
+    steps_ahead: int  # Must equal horizon_steps from request
 
 
 @router.post("/infer", response_model=InferenceReport, status_code=201)
@@ -84,21 +104,34 @@ def run_inference_endpoint(
     """
     Run inference on calibrated features and return structured InferenceReport.
     
+    Supports both calibrated_id (preferred) and features (legacy).
     Returns a stable contract with all required fields for production use.
     """
-    cal_features = db.query(CalibratedFeatures).filter(
-        CalibratedFeatures.id == request.calibrated_id,
-        CalibratedFeatures.user_id == current_user.id,
-    ).first()
-    
-    if not cal_features:
+    # Determine features to use: calibrated_id takes precedence
+    if request.calibrated_id:
+        cal_features = db.query(CalibratedFeatures).filter(
+            CalibratedFeatures.id == request.calibrated_id,
+            CalibratedFeatures.user_id == current_user.id,
+        ).first()
+        
+        if not cal_features:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Calibrated features not found",
+            )
+        
+        # Extract features in deterministic order: sorted keys
+        features = [cal_features.feature_1, cal_features.feature_2, cal_features.feature_3]
+    elif request.features:
+        # Legacy path: accept features dict
+        features = [request.features.get(f"feature_{i}", 0.0) for i in range(1, 4)]
+    else:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Calibrated features not found",
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Either calibrated_id or features must be provided",
         )
     
     # Perform inference
-    features = [cal_features.feature_1, cal_features.feature_2, cal_features.feature_3]
     inference_result_dict = run_inference(features)
     
     # Store result
@@ -171,15 +204,45 @@ def run_inference_endpoint(
 
 
 @router.post("/forecast", response_model=ForecastResponse)
-def forecast_endpoint(request: ForecastRequest):
+def forecast_endpoint(
+    request: ForecastRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """
-    Simple forecast endpoint.
-    Uses horizon_steps (or steps_ahead) to generate multi-step forecast.
+    Forecast endpoint supporting both calibrated_id and feature_values.
+    
+    If calibrated_id is provided, loads calibrated features from DB.
+    Otherwise, uses provided feature_values.
+    Supports both horizon_steps (canonical) and steps_ahead (legacy alias).
     """
-    # Use horizon_steps if provided, otherwise fall back to steps_ahead
+    # Determine features to use: calibrated_id takes precedence
+    if request.calibrated_id:
+        cal_features = db.query(CalibratedFeatures).filter(
+            CalibratedFeatures.id == request.calibrated_id,
+            CalibratedFeatures.user_id == current_user.id,
+        ).first()
+        
+        if not cal_features:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Calibrated features not found",
+            )
+        
+        # Extract features in deterministic order
+        feature_values = [cal_features.feature_1, cal_features.feature_2, cal_features.feature_3]
+    elif request.feature_values:
+        feature_values = request.feature_values
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Either calibrated_id or feature_values must be provided",
+        )
+    
+    # Use canonical horizon_steps; should be reconciled in __init__
     steps = max(1, request.horizon_steps or request.steps_ahead)
     
-    result = forecast_next_step(request.feature_values, steps_ahead=steps)
+    result = forecast_next_step(feature_values, steps_ahead=steps)
     
     # Ensure forecasts list is populated
     forecasts = result.get("forecasts", [])
