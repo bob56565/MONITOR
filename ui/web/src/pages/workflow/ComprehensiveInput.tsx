@@ -141,7 +141,7 @@ export const ComprehensiveInputPage: React.FC = () => {
       }
 
       // Send to backend
-      const response = await fetch('http://localhost:8000/runs/v2', {
+      const response = await fetch('/runs/v2', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -10,7 +10,7 @@
  * 6. Results retrieval & history
  */
 
-const API_BASE = (import.meta as any).env.VITE_API_BASE || 'http://localhost:8000';
+const API_BASE = (import.meta as any).env.VITE_API_BASE || '';
 
 const getAuthHeaders = (): HeadersInit => {
   const token = localStorage.getItem('authToken');
