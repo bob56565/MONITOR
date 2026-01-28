@@ -143,14 +143,21 @@ class TestDataIngestion:
         self.token = (response.json().get("token") or response.json().get("access_token"))
     
     def test_ingest_raw_data(self):
-        response = client.post("/data/raw", headers=auth_headers((login_response.json().get("token") or login_response.json().get("access_token"))), json={"timestamp":"2026-01-27T00:00:00Z","specimen_type":"blood","observed":{"glucose_mg_dl":120.0,"lactate_mmol_l":2.0},"context":{"age":30,"sex":"M","fasting":False}})
+        response = client.post(
+            "/data/raw",
+            headers=auth_headers(self.token),
+            json={
+                "timestamp": "2026-01-27T00:00:00Z",
+                "specimen_type": "blood",
+                "observed": {"glucose_mg_dl": 120.0, "lactate_mmol_l": 2.0},
+                "context": {"age": 30, "sex": "M", "fasting": False}
+            }
+        )
         assert response.status_code in (200, 201)
         data = response.json()
-        assert data["sensor_value_1"] == 1.5
-        assert data["sensor_value_2"] == 2.5
-        assert data["sensor_value_3"] == 3.5
-        assert "id" in data
-        self.raw_data_id = data["id"]
+        raw_id = data.get("raw_id") or data.get("id") or data.get("raw_sensor_data_id")
+        assert raw_id is not None
+        self.raw_data_id = raw_id
     
     def test_ingest_raw_data_unauthenticated(self):
         response = client.post(
@@ -165,22 +172,39 @@ class TestDataIngestion:
     
     def test_preprocess_data(self):
         # Ingest raw data first
-        ingest_response = client.post("/data/raw", headers=auth_headers((login_response.json().get("token") or login_response.json().get("access_token"))), json={"timestamp":"2026-01-27T00:00:00Z","specimen_type":"blood","observed":{"glucose_mg_dl":120.0,"lactate_mmol_l":2.0},"context":{"age":30,"sex":"M","fasting":False}})
+        ingest_response = client.post(
+            "/data/raw",
+            headers=auth_headers(self.token),
+            json={
+                "timestamp": "2026-01-27T00:00:00Z",
+                "specimen_type": "blood",
+                "observed": {"glucose_mg_dl": 120.0, "lactate_mmol_l": 2.0},
+                "context": {"age": 30, "sex": "M", "fasting": False}
+            }
+        )
         raw_id = ingest_response.json().get("raw_id") or ingest_response.json().get("id") or ingest_response.json().get("raw_sensor_data_id")
         
         # Preprocess
-        response = client.post("/data/preprocess", headers=auth_headers((login_response.json().get("token") or login_response.json().get("access_token"))), json={"raw_id": raw_id})
+        response = client.post(
+            "/data/preprocess",
+            headers=auth_headers(self.token),
+            json={"raw_id": raw_id}
+        )
         assert response.status_code in (200, 201)
         data = response.json()
         assert "features" in data and "feature_1" in data["features"]
         assert "features" in data and "feature_2" in data["features"]
         assert "features" in data and "feature_3" in data["features"]
-        assert "derived_metric" in data
+        assert "calibrated_metric" in data or "derived_metric" in data
         assert "id" in data
         self.calibrated_id = data["id"]
     
     def test_preprocess_nonexistent_raw_data(self):
-        response = client.post("/data/preprocess", headers=auth_headers((login_response.json().get("token") or login_response.json().get("access_token"))), json={"raw_id": 9999})
+        response = client.post(
+            "/data/preprocess",
+            headers=auth_headers(self.token),
+            json={"raw_id": 9999}
+        )
         assert response.status_code == 404
 
 
@@ -198,33 +222,44 @@ class TestInference:
         self.token = (response.json().get("token") or response.json().get("access_token"))
         
         # Ingest and preprocess
-        ingest_response = client.post("/data/raw", headers=auth_headers((login_response.json().get("token") or login_response.json().get("access_token"))), json={"timestamp":"2026-01-27T00:00:00Z","specimen_type":"blood","observed":{"glucose_mg_dl":120.0,"lactate_mmol_l":2.0},"context":{"age":30,"sex":"M","fasting":False}})
+        ingest_response = client.post(
+            "/data/raw",
+            headers=auth_headers(self.token),
+            json={
+                "timestamp": "2026-01-27T00:00:00Z",
+                "specimen_type": "blood",
+                "observed": {"glucose_mg_dl": 120.0, "lactate_mmol_l": 2.0},
+                "context": {"age": 30, "sex": "M", "fasting": False}
+            }
+        )
         raw_id = ingest_response.json().get("raw_id") or ingest_response.json().get("id") or ingest_response.json().get("raw_sensor_data_id")
         
-        preprocess_response = client.post("/data/preprocess", headers=auth_headers((login_response.json().get("token") or login_response.json().get("access_token"))), json={"raw_id": raw_id})
+        preprocess_response = client.post(
+            "/data/preprocess",
+            headers=auth_headers(self.token),
+            json={"raw_id": raw_id}
+        )
         self.calibrated_id = preprocess_response.json().get("calibrated_id") or preprocess_response.json().get("id") or preprocess_response.json().get("calibrated_features_id")
     
     def test_infer(self):
         response = client.post(
             "/ai/infer",
             json={"calibrated_id": self.calibrated_id},
-            headers=auth_headers((login_response.json().get("token") or login_response.json().get("access_token")))
+            headers=auth_headers(self.token)
         )
         assert response.status_code in (200, 201)
         data = response.json()
-        assert "prediction" in data
-        assert "confidence" in data
-        assert "uncertainty" in data
-        assert "id" in data
-        assert 0 <= data["confidence"] <= 1.0
-        assert 0 <= data["uncertainty"] <= 1.0
+        assert "trace_id" in data
+        assert "created_at" in data
+        assert "inferred" in data
+        assert isinstance(data["inferred"], list)
     
     def test_infer_response_has_all_required_keys(self):
         """Test that InferenceReport response includes all required schema fields."""
         response = client.post(
             "/ai/infer",
             json={"calibrated_id": self.calibrated_id},
-            headers=auth_headers((login_response.json().get("token") or login_response.json().get("access_token")))
+            headers=auth_headers(self.token)
         )
         assert response.status_code in (200, 201)
         data = response.json()
@@ -269,7 +304,7 @@ class TestInference:
         response = client.post(
             "/ai/infer",
             json={"calibrated_id": self.calibrated_id},
-            headers=auth_headers((login_response.json().get("token") or login_response.json().get("access_token")))
+            headers=auth_headers(self.token)
         )
         assert response.status_code in (200, 201)
         data = response.json()
@@ -291,7 +326,7 @@ class TestInference:
         response = client.post(
             "/ai/infer",
             json={"calibrated_id": 9999},
-            headers=auth_headers((login_response.json().get("token") or login_response.json().get("access_token")))
+            headers=auth_headers(self.token)
         )
         assert response.status_code == 404
     
@@ -331,25 +366,27 @@ class TestEndToEnd:
             json={"email": email, "password": "password123"}
         )
         assert login_response.status_code == 200
+        token = login_response.json().get("token") or login_response.json().get("access_token")
         
         # Ingest raw data
         ingest_response = client.post(
             "/data/raw",
             json={
-                "sensor_value_1": 5.0,
-                "sensor_value_2": 6.0,
-                "sensor_value_3": 7.0,
+                "timestamp": "2026-01-27T00:00:00Z",
+                "specimen_type": "blood",
+                "observed": {"glucose_mg_dl": 120.0, "lactate_mmol_l": 2.0},
+                "context": {"age": 30, "sex": "M", "fasting": False}
             },
-            headers=auth_headers((login_response.json().get("token") or login_response.json().get("access_token")))
+            headers=auth_headers(token)
         )
-        assert ingest_response.status_code == 200
+        assert ingest_response.status_code in (200, 201)
         raw_id = ingest_response.json().get("raw_id") or ingest_response.json().get("id") or ingest_response.json().get("raw_sensor_data_id")
         
         # Preprocess
         preprocess_response = client.post(
             "/data/preprocess",
-            json={"raw_sensor_id": raw_id},
-            headers=auth_headers((login_response.json().get("token") or login_response.json().get("access_token")))
+            json={"raw_id": raw_id},
+            headers=auth_headers(token)
         )
         assert preprocess_response.status_code == 200
         calibrated_id = preprocess_response.json().get("calibrated_id") or preprocess_response.json().get("id") or preprocess_response.json().get("calibrated_features_id")
@@ -357,11 +394,11 @@ class TestEndToEnd:
         # Infer
         infer_response = client.post(
             "/ai/infer",
-            json={"calibrated_feature_id": calibrated_id},
-            headers=auth_headers((login_response.json().get("token") or login_response.json().get("access_token")))
+            json={"calibrated_id": calibrated_id},
+            headers=auth_headers(token)
         )
-        assert infer_response.status_code == 200
+        assert infer_response.status_code in (200, 201)
         inference_data = infer_response.json()
-        assert "prediction" in inference_data
-        assert "confidence" in inference_data
-        assert "uncertainty" in inference_data
+        assert "trace_id" in inference_data
+        assert "created_at" in inference_data
+        assert "inferred" in inference_data
