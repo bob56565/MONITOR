@@ -541,6 +541,254 @@ class TestM5PDFReports:
         assert response.headers["content-type"] == "application/pdf"
 
 
+class TestM6E2EIntegration:
+    """Test Milestone 6: End-to-End Integration Tests."""
+    
+    def test_full_pipeline_with_calibrated_id(self):
+        """Full E2E test: signup → raw → preprocess → infer (calibrated_id) → forecast (calibrated_id) → PDF."""
+        email = generate_email()
+        
+        # Step 1: Signup
+        signup_response = client.post(
+            "/auth/signup",
+            json={"email": email, "password": "password123"}
+        )
+        assert signup_response.status_code == 200
+        token = signup_response.json().get("access_token") or signup_response.json().get("token")
+        user_id = signup_response.json()["user_id"]
+        
+        # Step 2: Ingest raw data
+        raw_response = client.post(
+            "/data/raw",
+            headers=auth_headers(token),
+            json={
+                "timestamp": "2026-01-27T12:00:00Z",
+                "specimen_type": "blood",
+                "observed": {"glucose_mg_dl": 110.0, "lactate_mmol_l": 1.8},
+                "context": {"age": 45, "sex": "F", "fasting": True}
+            }
+        )
+        assert raw_response.status_code in (200, 201)
+        raw_id = raw_response.json().get("id") or raw_response.json().get("raw_id")
+        assert raw_id is not None
+        
+        # Step 3: Preprocess
+        preprocess_response = client.post(
+            "/data/preprocess",
+            headers=auth_headers(token),
+            json={"raw_id": raw_id}
+        )
+        assert preprocess_response.status_code == 200
+        calibrated_id = preprocess_response.json().get("id") or preprocess_response.json().get("calibrated_id")
+        assert calibrated_id is not None
+        
+        # Step 4: Infer with calibrated_id
+        infer_response = client.post(
+            "/ai/infer",
+            headers=auth_headers(token),
+            json={"calibrated_id": calibrated_id}
+        )
+        assert infer_response.status_code in (200, 201)
+        inference_data = infer_response.json()
+        assert "trace_id" in inference_data
+        assert "inferred" in inference_data
+        
+        # Step 5: Forecast with calibrated_id
+        forecast_response = client.post(
+            "/ai/forecast",
+            headers=auth_headers(token),
+            json={
+                "calibrated_id": calibrated_id,
+                "horizon_steps": 5
+            }
+        )
+        assert forecast_response.status_code in (200, 201)
+        forecast_data = forecast_response.json()
+        assert forecast_data["steps_ahead"] == 5
+        assert len(forecast_data["forecasts"]) == 5
+        
+        # Step 6: Generate PDF
+        pdf_response = client.post(
+            "/reports/pdf",
+            headers=auth_headers(token),
+            json={
+                "raw_id": raw_id,
+                "calibrated_id": calibrated_id,
+                "trace_id": inference_data["trace_id"]
+            }
+        )
+        assert pdf_response.status_code in (200, 201)
+        assert pdf_response.headers["content-type"] == "application/pdf"
+        assert pdf_response.content[:4] == b"%PDF"
+        assert len(pdf_response.content) > 1000  # Reasonable PDF size
+    
+    def test_full_pipeline_with_feature_values(self):
+        """Full E2E test: signup → raw → forecast (feature_values) → PDF."""
+        email = generate_email()
+        
+        # Signup
+        signup_response = client.post(
+            "/auth/signup",
+            json={"email": email, "password": "password123"}
+        )
+        token = signup_response.json().get("access_token") or signup_response.json().get("token")
+        
+        # Ingest raw data
+        raw_response = client.post(
+            "/data/raw",
+            headers=auth_headers(token),
+            json={
+                "timestamp": "2026-01-27T12:00:00Z",
+                "specimen_type": "plasma",
+                "observed": {"glucose_mg_dl": 95.0, "lactate_mmol_l": 1.2},
+                "context": {}
+            }
+        )
+        raw_id = raw_response.json().get("id") or raw_response.json().get("raw_id")
+        
+        # Test forecast with feature_values (direct, no preprocessing)
+        forecast_response = client.post(
+            "/ai/forecast",
+            headers=auth_headers(token),
+            json={
+                "feature_values": [0.5, 0.6, 0.7],
+                "horizon_steps": 2
+            }
+        )
+        assert forecast_response.status_code in (200, 201)
+        forecast_data = forecast_response.json()
+        assert forecast_data["steps_ahead"] == 2
+        assert len(forecast_data["forecasts"]) == 2
+        
+        # Test infer with features dict
+        infer_response = client.post(
+            "/ai/infer",
+            headers=auth_headers(token),
+            json={
+                "features": {
+                    "feature_1": 0.5,
+                    "feature_2": 0.6,
+                    "feature_3": 0.7
+                }
+            }
+        )
+        assert infer_response.status_code in (200, 201)
+        assert "trace_id" in infer_response.json()
+    
+    def test_multiple_users_isolation(self):
+        """Test that multiple users' data is properly isolated."""
+        # User 1
+        email1 = generate_email()
+        signup1 = client.post(
+            "/auth/signup",
+            json={"email": email1, "password": "pass123"}
+        )
+        token1 = signup1.json().get("access_token") or signup1.json().get("token")
+        
+        # User 2
+        email2 = generate_email()
+        signup2 = client.post(
+            "/auth/signup",
+            json={"email": email2, "password": "pass123"}
+        )
+        token2 = signup2.json().get("access_token") or signup2.json().get("token")
+        
+        # User 1 ingests data
+        raw1 = client.post(
+            "/data/raw",
+            headers=auth_headers(token1),
+            json={
+                "timestamp": "2026-01-27T12:00:00Z",
+                "specimen_type": "blood",
+                "observed": {"glucose_mg_dl": 150.0, "lactate_mmol_l": 2.5},
+                "context": {}
+            }
+        )
+        raw_id1 = raw1.json().get("id") or raw1.json().get("raw_id")
+        
+        # User 2 tries to access User 1's data - should fail
+        preprocess_fail = client.post(
+            "/data/preprocess",
+            headers=auth_headers(token2),
+            json={"raw_id": raw_id1}
+        )
+        assert preprocess_fail.status_code == 404  # User 2 should not see User 1's data
+    
+    def test_backward_compatibility_steps_ahead_alias(self):
+        """Test that legacy steps_ahead alias still works."""
+        email = generate_email()
+        signup = client.post(
+            "/auth/signup",
+            json={"email": email, "password": "pass123"}
+        )
+        token = signup.json().get("access_token") or signup.json().get("token")
+        
+        # Use only steps_ahead (legacy), no horizon_steps
+        response = client.post(
+            "/ai/forecast",
+            headers=auth_headers(token),
+            json={
+                "feature_values": [1.0, 1.5, 2.0],
+                "steps_ahead": 3
+            }
+        )
+        assert response.status_code in (200, 201)
+        data = response.json()
+        assert data["steps_ahead"] == 3  # Should use steps_ahead value
+        assert len(data["forecasts"]) == 3
+    
+    def test_error_handling_missing_auth(self):
+        """Test that endpoints properly reject requests without auth."""
+        # Try to forecast without token
+        response = client.post(
+            "/ai/forecast",
+            json={
+                "feature_values": [1.0, 1.5, 2.0],
+                "horizon_steps": 1
+            }
+        )
+        assert response.status_code == 401
+        
+        # Try to infer without token
+        response = client.post(
+            "/ai/infer",
+            json={"calibrated_id": 1}
+        )
+        assert response.status_code == 401
+        
+        # Try to generate PDF without token
+        response = client.post(
+            "/reports/pdf",
+            json={"calibrated_id": 1}
+        )
+        assert response.status_code == 401
+    
+    def test_error_handling_missing_fields(self):
+        """Test that endpoints properly validate required fields."""
+        email = generate_email()
+        signup = client.post(
+            "/auth/signup",
+            json={"email": email, "password": "pass123"}
+        )
+        token = signup.json().get("access_token") or signup.json().get("token")
+        
+        # Missing required fields in forecast (no calibrated_id or feature_values)
+        response = client.post(
+            "/ai/forecast",
+            headers=auth_headers(token),
+            json={"horizon_steps": 1}
+        )
+        assert response.status_code == 422
+        
+        # Missing required fields in PDF (no identifiers)
+        response = client.post(
+            "/reports/pdf",
+            headers=auth_headers(token),
+            json={}
+        )
+        assert response.status_code == 422
+
+
 class TestM4ContractUnification:
     """Test Milestone 4: API Contract Unification for forecast and infer."""
     

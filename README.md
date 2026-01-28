@@ -1,6 +1,6 @@
 # MONITOR API - ISF/Specimen Inference MVP Backend
 
-A FastAPI-based backend for sensor data ingestion, preprocessing, and ML inference. This MVP provides endpoints for user authentication, raw sensor data ingestion, calibration/preprocessing, and inference with uncertainty quantification.
+A FastAPI-based backend for sensor data ingestion, preprocessing, and ML inference. This MVP provides endpoints for user authentication, raw sensor data ingestion, calibration/preprocessing, inference with uncertainty quantification, forecasting, and PDF report generation.
 
 ## Features
 
@@ -8,10 +8,60 @@ A FastAPI-based backend for sensor data ingestion, preprocessing, and ML inferen
 - **Raw Data Ingestion**: Endpoint to submit raw sensor readings
 - **Preprocessing**: Calibration and feature engineering pipeline
 - **ML Inference**: Lightweight MVP model with uncertainty heuristics
-- **Forecasting**: Simple trend-based forecasting stub
+- **Forecasting**: Trend-based forecasting with multi-step predictions
+- **Unifiied API Contracts** (M4): Both `/ai/infer` and `/ai/forecast` support `calibrated_id` DB lookups
+- **Dashboard UI** (M5): Streamlit dashboard for interactive pipeline execution
+- **PDF Reports** (M5): Generate professional PDF reports with system metadata
+- **E2E Testing** (M6): Comprehensive integration tests with smoke scripts
 - **Database**: SQLAlchemy ORM with PostgreSQL (configurable)
-- **Testing**: Comprehensive pytest suite with end-to-end workflows
+- **Testing**: Comprehensive pytest suite with 37 tests (unit + integration + E2E)
 - **Docker Support**: docker-compose setup for PostgreSQL and API
+
+## Milestones (M4–M6) Overview
+
+### Milestone 4: API Contract Unification + DB-Wired Forecast
+- **Objective**: Unify inference and forecast request/response contracts
+- **What's New**:
+  - `POST /ai/forecast` now accepts `calibrated_id` in addition to `feature_values`
+  - `POST /ai/infer` now accepts optional `features` dict (legacy convenience)
+  - Both endpoints support deterministic feature ordering from DB
+  - `horizon_steps` (canonical) supersedes legacy `steps_ahead` alias
+- **Backward Compatibility**: Legacy `steps_ahead` and `feature_values` still work
+- **Tests**: 8 new M4 contract tests + all 25 existing tests pass
+
+### Milestone 5: Dashboard UI + PDF Report Generator
+- **Objective**: Create a usable demo UI and report generation
+- **What's New**:
+  - **Streamlit Dashboard** (`ui/app.py`):
+    - Login/signup with email/password
+    - Full pipeline UI: raw → preprocess → infer → forecast → PDF export
+    - Real-time JSON display of results
+    - Copy-to-clipboard support for outputs
+  - **PDF Endpoint** (`POST /reports/pdf`):
+    - Accepts `raw_id`, `calibrated_id`, or `trace_id`
+    - Generates professional PDF with system metadata
+    - Uses reportlab for deterministic PDF generation
+    - Includes sections: header, raw data, preprocessing, inference, forecast, assumptions/limitations
+- **Tests**: 6 new M5 PDF tests covering both API and UI flows
+
+### Milestone 6: End-to-End Testing + Demo Scripts + CI Stability
+- **Objective**: Make the system reproducible and demonstrable
+- **What's New**:
+  - **E2E Integration Tests** (6 tests in `TestM6E2EIntegration`):
+    - Full pipeline with `calibrated_id` pathway
+    - Full pipeline with `feature_values` pathway
+    - Multi-user data isolation verification
+    - Legacy alias compatibility tests
+    - Error handling (missing auth, missing fields)
+  - **Smoke Test Scripts**:
+    - `scripts/smoke_local.sh` (bash version)
+    - `scripts/smoke_local.py` (Python version)
+    - Tests all major flows in sequence
+    - Validates data isolation across users
+    - Outputs human-readable status + generates sample PDF
+  - **README**: Updated with Milestones, API documentation, and exact runnable commands
+- **Tests**: All 37 tests pass; CI-ready with deterministic validation
+
 
 ## Quick Start
 
@@ -41,9 +91,23 @@ A FastAPI-based backend for sensor data ingestion, preprocessing, and ML inferen
 
    API will be available at `http://localhost:8000`
 
-4. **Run tests**:
+4. **Run the Dashboard UI** (in another terminal):
+   ```bash
+   streamlit run ui/app.py
+   ```
+
+   Dashboard will be available at `http://localhost:8501`
+
+5. **Run tests**:
    ```bash
    pytest -q
+   ```
+
+6. **Run smoke test** (with API running):
+   ```bash
+   python scripts/smoke_local.py
+   # or
+   bash scripts/smoke_local.sh
    ```
 
 ### Docker Setup
@@ -90,19 +154,92 @@ A FastAPI-based backend for sensor data ingestion, preprocessing, and ML inferen
   {"raw_sensor_id": 1}
   ```
 
-### AI/ML
-- `POST /ai/infer` - Run inference on calibrated features (requires `user_id` param)
-  ```json
-  {"calibrated_feature_id": 1}
-  ```
-  **Response**: Stable InferenceReport contract with complete schema (see Example Workflow)
-- `POST /ai/forecast` - Simple forecast (no auth required for MVP)
-  ```json
-  {
-    "feature_values": [1.0, 1.5, 2.0],
-    "steps_ahead": 1
+### AI/ML (Unified API Contracts — M4)
+
+#### **POST /ai/infer** - Run inference (supports both calibrated_id and features)
+**Authentication**: Required (Bearer token)
+
+**Request Options**:
+
+Option 1: Using `calibrated_id` (preferred):
+```json
+{
+  "calibrated_id": 1
+}
+```
+
+Option 2: Using `features` dict (legacy convenience):
+```json
+{
+  "features": {
+    "feature_1": 0.5,
+    "feature_2": 0.6,
+    "feature_3": 0.7
   }
-  ```
+}
+```
+
+**Response**: Stable `InferenceReport` contract (see schema below)
+
+---
+
+#### **POST /ai/forecast** - Forecast with multi-step support (supports both calibrated_id and feature_values — M4)
+**Authentication**: Required (Bearer token)
+
+**Request Options**:
+
+Option 1: Using `calibrated_id` (preferred, loads features from DB):
+```json
+{
+  "calibrated_id": 1,
+  "horizon_steps": 5
+}
+```
+
+Option 2: Using `feature_values` (legacy backward compatibility):
+```json
+{
+  "feature_values": [1.0, 1.5, 2.0],
+  "horizon_steps": 3
+}
+```
+
+**Legacy Field Support**:
+```json
+{
+  "feature_values": [1.0, 1.5, 2.0],
+  "steps_ahead": 2
+}
+```
+*Note: `horizon_steps` takes precedence if both `horizon_steps` and `steps_ahead` are provided*
+
+**Response**:
+```json
+{
+  "forecast": 2.5,
+  "forecasts": [2.5, 2.5, 2.5],
+  "steps_ahead": 3,
+  "confidence": 0.4
+}
+```
+
+---
+
+#### **POST /reports/pdf** - Generate PDF report (M5)
+**Authentication**: Required (Bearer token)
+
+**Request**: Provide at least one identifier:
+```json
+{
+  "raw_id": 1,
+  "calibrated_id": 1,
+  "trace_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Response**: PDF file (Content-Type: `application/pdf`)
+
+---
 
 ## InferenceReport Contract
 
@@ -207,22 +344,29 @@ MONITOR/
 │   ├── api/
 │   │   ├── auth.py            # Authentication routes
 │   │   ├── data.py            # Data ingestion/preprocessing routes
-│   │   ├── ai.py              # Inference/forecast routes
+│   │   ├── ai.py              # Inference/forecast routes (M4 unified contracts)
+│   │   ├── reports.py         # PDF report generation (M5)
 │   │   └── deps.py            # Dependency injection
 │   ├── db/
 │   │   ├── session.py         # Database session management
 │   │   └── base.py            # SQLAlchemy base
 │   ├── models/
-│   │   └── user.py            # ORM models (User, RawSensorData, etc)
+│   │   └── user.py            # ORM models (User, RawSensorData, CalibratedFeatures, etc)
 │   ├── features/
 │   │   ├── calibration.py     # Sensor calibration functions
 │   │   └── derived.py         # Feature engineering
 │   └── ml/
 │       ├── inference.py       # MVP inference model
 │       └── forecast.py        # Forecasting stub
+├── ui/
+│   └── app.py                 # Streamlit dashboard (M5)
+├── scripts/
+│   ├── smoke_local.py         # Smoke test (Python version — M6)
+│   └── smoke_local.sh         # Smoke test (Bash version — M6)
 ├── alembic/                    # Database migrations
 ├── tests/
-│   └── test_api.py            # Comprehensive pytest suite
+│   ├── test_api.py            # 37 comprehensive tests (M1-M6)
+│   └── __init__.py
 ├── requirements.txt           # Python dependencies
 ├── docker-compose.yml         # Docker setup
 └── README.md                  # This file
@@ -244,9 +388,63 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/monitor
 SQL_ECHO=false
 ```
 
+## Running the Dashboard UI (M5)
+
+The Streamlit dashboard provides an interactive interface for the full pipeline:
+
+```bash
+# Terminal 1: Start API
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# Terminal 2: Start Streamlit dashboard
+streamlit run ui/app.py --server.port 8501
+```
+
+The dashboard will be available at `http://localhost:8501`
+
+**Dashboard Features**:
+- User authentication (signup/login)
+- Raw data ingestion form
+- Preprocessing trigger
+- Inference results display
+- Multi-step forecast with horizon slider
+- Real-time JSON inspection
+- PDF report download
+
+## Running Smoke Tests (M6)
+
+Smoke tests validate the full pipeline end-to-end:
+
+```bash
+# Ensure API is running on localhost:8000
+uvicorn app.main:app --port 8000 &
+
+# Run Python smoke test
+python scripts/smoke_local.py
+
+# Or run Bash smoke test
+bash scripts/smoke_local.sh
+```
+
+**Smoke Test Coverage**:
+- ✅ API health check
+- ✅ User signup
+- ✅ Raw data ingestion
+- ✅ Preprocessing
+- ✅ Inference with calibrated_id (M4)
+- ✅ Forecast with calibrated_id (M4)
+- ✅ Forecast with feature_values (legacy compatibility)
+- ✅ PDF report generation (M5)
+- ✅ Multi-user data isolation
+
 ## Testing
 
-Run all tests with verbose output:
+Run all 37 tests (unit + integration + E2E):
+```bash
+pytest -q
+```
+
+Run with verbose output:
 ```bash
 pytest -v
 ```
@@ -254,12 +452,23 @@ pytest -v
 Run specific test class:
 ```bash
 pytest tests/test_api.py::TestAuth -v
+pytest tests/test_api.py::TestM4ContractUnification -v  # M4 tests
+pytest tests/test_api.py::TestM5PDFReports -v           # M5 tests
+pytest tests/test_api.py::TestM6E2EIntegration -v       # M6 tests
 ```
 
 Coverage report:
 ```bash
 pytest --cov=app tests/
 ```
+
+**Test Coverage**:
+- Unit tests: Auth, data ingestion, preprocessing
+- Integration tests: Full pipeline workflows
+- E2E tests (M6): Multi-user isolation, error handling, backward compatibility
+- M4 tests: Contract unification (calibrated_id + feature_values)
+- M5 tests: PDF generation with various inputs
+- Total: 37 tests, all passing
 
 ## Notes
 
