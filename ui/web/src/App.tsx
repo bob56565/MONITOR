@@ -4,6 +4,7 @@ import { ComprehensiveInputPage } from './pages/workflow/ComprehensiveInput'
 import { PreprocessingPage, AnalysisPage, InferencePage } from './pages/workflow'
 import { OverviewPage, LabsPage, KeyLegendPage } from './pages/results'
 import { useWorkflow } from './hooks/useWorkflow'
+import { useAuth } from './hooks/useAuth'
 
 function Navigation() {
   const location = useLocation()
@@ -77,6 +78,39 @@ function Navigation() {
 }
 
 export default function App() {
+  const { isAuthenticated, isLoading, error } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="w-full min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Initializing MONITOR</h2>
+          <p className="text-gray-600">Setting up your authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="w-full min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <h2 className="text-3xl font-bold text-red-600 mb-4">⚠️ Authentication Failed</h2>
+          <p className="text-gray-700 mb-4">Could not authenticate with the backend.</p>
+          <p className="text-gray-600 text-sm mb-4">{error}</p>
+          <p className="text-gray-600 text-sm">Please ensure the backend server is running at <code className="bg-gray-100 px-2 py-1 rounded">http://localhost:8000</code></p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <BrowserRouter>
       <div className="w-full min-h-screen bg-gray-50">
@@ -100,5 +134,5 @@ export default function App() {
         </Routes>
       </div>
     </BrowserRouter>
-  )
+  );
 }
