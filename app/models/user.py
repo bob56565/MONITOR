@@ -63,3 +63,28 @@ class InferenceResult(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="inference_results")
+
+
+class RunV2Record(Base):
+    """
+    Non-breaking storage for RunV2 payloads.
+    Contains multi-specimen ingestion + non-lab inputs + qual encoding outputs.
+    """
+    __tablename__ = "runs_v2"
+
+    id = Column(Integer, primary_key=True, index=True)
+    run_id = Column(String, unique=True, index=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    timezone = Column(String, default="UTC")
+    legacy_raw_id = Column(Integer, ForeignKey("raw_sensor_data.id"), nullable=True)
+    
+    # Full RunV2 payload stored as JSON
+    payload = Column(JSON, nullable=False)
+    
+    # Indexed fields for efficient queries
+    schema_version = Column(String, default="runv2.1")
+    specimen_count = Column(Integer, default=0)
+    
+    user = relationship("User")
+    legacy_raw = relationship("RawSensorData")
