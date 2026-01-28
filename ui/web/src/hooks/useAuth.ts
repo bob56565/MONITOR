@@ -20,8 +20,8 @@ export function useAuth() {
         }
 
         // No token, auto-create a test user and login
-        const testEmail = `testuser-${Date.now()}@monitor.local`;
-        const testPassword = 'MonitorTestPass123!';
+        const testEmail = `testuser-${Date.now()}@example.com`;
+        const testPassword = 'MonitorTestPass123';
 
         try {
           // Try to signup
