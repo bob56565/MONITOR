@@ -1,253 +1,383 @@
 /**
- * Inference Results API Service
+ * Inference API Service
  * 
- * Handles all communication with backend inference endpoints.
- * Includes error handling, request state management, and data transformation.
+ * Complete API layer handling:
+ * 1. Authentication (login/signup)
+ * 2. Raw data ingestion (sensor uploads)
+ * 3. Data preprocessing & calibration
+ * 4. Analysis pipeline
+ * 5. Inference (v2 and legacy)
+ * 6. Results retrieval & history
  */
 
-import { ResultBundle, InferenceMode, InferenceResponse, HistoryResponse } from '../types/results';
+const API_BASE = (import.meta as any).env.VITE_API_BASE || 'http://localhost:8000';
 
-// ============================================================================
-// CONFIGURATION
-// ============================================================================
-
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
-const INFERENCE_V2_ENDPOINT = `${API_BASE}/ai/inference/v2`;
-const INFERENCE_LEGACY_ENDPOINT = `${API_BASE}/ai/inference`;
-const RESULTS_LATEST_ENDPOINT = `${API_BASE}/results/latest`;
-const RESULTS_HISTORY_ENDPOINT = `${API_BASE}/results/history`;
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-/**
- * Get Bearer token from localStorage or session
- */
-function getAuthToken(): string {
-  const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
-  if (!token) {
-    throw new Error('No authentication token found. Please log in.');
-  }
-  return token;
-}
-
-/**
- * Standard fetch with auth header
- */
-async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  const token = getAuthToken();
-  const headers = {
+const getAuthHeaders = (): HeadersInit => {
+  const token = localStorage.getItem('authToken');
+  return {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`,
-    ...options.headers,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
+};
 
-  const response = await fetch(url, { ...options, headers });
-
-  if (response.status === 401) {
-    // Clear token and redirect to login
-    localStorage.removeItem('auth_token');
-    sessionStorage.removeItem('auth_token');
-    window.location.href = '/login';
-    throw new Error('Unauthorized. Redirecting to login.');
-  }
-
+const handleResponse = async (response: Response) => {
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.detail || 
-      `API error ${response.status}: ${response.statusText}`
-    );
+    const error = await response.text();
+    throw new Error(`API Error ${response.status}: ${error}`);
   }
-
-  return response;
-}
+  try {
+    return await response.json();
+  } catch {
+    return { status: 'success' };
+  }
+};
 
 // ============================================================================
-// INFERENCE ENDPOINTS
+// AUTHENTICATION
 // ============================================================================
 
-/**
- * Run v2 inference and fetch latest results
- */
-export async function runInferenceV2(runId: string): Promise<ResultBundle> {
-  try {
-    const response = await authFetch(INFERENCE_V2_ENDPOINT, {
+export const authApi = {
+  /**
+   * Register new user
+   */
+  async signup(email: string, password: string, name?: string) {
+    const response = await fetch(`${API_BASE}/auth/signup`, {
       method: 'POST',
-      body: JSON.stringify({ run_id: runId }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, name }),
     });
+    const data = await handleResponse(response);
+    if (data.access_token) {
+      localStorage.setItem('authToken', data.access_token);
+      localStorage.setItem('userId', data.user_id);
+    }
+    return data;
+  },
 
-    const data: InferenceResponse = await response.json();
-    return transformInferenceResponse(data, 'v2');
-  } catch (error) {
-    throw new Error(`Failed to run v2 inference: ${(error as Error).message}`);
-  }
-}
-
-/**
- * Run legacy inference and fetch latest results
- */
-export async function runInferenceLegacy(runId: string): Promise<ResultBundle> {
-  try {
-    const response = await authFetch(INFERENCE_LEGACY_ENDPOINT, {
+  /**
+   * Login user
+   */
+  async login(email: string, password: string) {
+    const response = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',
-      body: JSON.stringify({ run_id: runId }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
     });
+    const data = await handleResponse(response);
+    if (data.access_token) {
+      localStorage.setItem('authToken', data.access_token);
+      localStorage.setItem('userId', data.user_id);
+    }
+    return data;
+  },
 
-    const data: InferenceResponse = await response.json();
-    return transformInferenceResponse(data, 'legacy');
-  } catch (error) {
-    throw new Error(`Failed to run legacy inference: ${(error as Error).message}`);
-  }
-}
+  /**
+   * Get current user profile
+   */
+  async getProfile() {
+    const response = await fetch(`${API_BASE}/auth/profile`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
 
-/**
- * Fetch latest inference result
- */
-export async function fetchLatestResults(): Promise<ResultBundle | null> {
-  try {
-    const response = await authFetch(RESULTS_LATEST_ENDPOINT);
-    const data = await response.json();
+  /**
+   * Logout user
+   */
+  logout() {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userId');
+  },
+};
 
-    if (!data) {
-      return null;
+// ============================================================================
+// RAW DATA INGESTION
+// ============================================================================
+
+export const dataApi = {
+  /**
+   * Ingest raw sensor data
+   * @param runId - Unique run identifier
+   * @param sensorType - Type of sensor (ISF, CGM, etc.)
+   * @param rawData - Raw sensor readings as CSV or JSON
+   */
+  async ingestRawData(runId: string, sensorType: string, rawData: string | File) {
+    const formData = new FormData();
+    formData.append('run_id', runId);
+    formData.append('sensor_type', sensorType);
+
+    if (rawData instanceof File) {
+      formData.append('file', rawData);
+    } else {
+      formData.append('data', rawData);
     }
 
-    return data as ResultBundle;
-  } catch (error) {
-    console.warn('Failed to fetch latest results:', error);
-    return null;
-  }
-}
+    const response = await fetch(`${API_BASE}/data/ingest`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
+      body: formData,
+    });
+    return handleResponse(response);
+  },
 
-/**
- * Fetch historical results for trends
- */
-export async function fetchResultsHistory(limit: number = 50): Promise<ResultBundle[]> {
-  try {
-    const url = new URL(RESULTS_HISTORY_ENDPOINT);
-    url.searchParams.append('limit', limit.toString());
+  /**
+   * Get ingested raw data for a run
+   */
+  async getRawData(runId: string) {
+    const response = await fetch(`${API_BASE}/data/raw/${runId}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
 
-    const response = await authFetch(url.toString());
-    const data: HistoryResponse = await response.json();
-
-    return data.items as any as ResultBundle[]; // Simplified for now
-  } catch (error) {
-    console.warn('Failed to fetch results history:', error);
-    return [];
-  }
-}
+  /**
+   * List all data runs for current user
+   */
+  async listRuns() {
+    const response = await fetch(`${API_BASE}/data/runs`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+};
 
 // ============================================================================
-// DATA TRANSFORMATION
+// PREPROCESSING & CALIBRATION
 // ============================================================================
 
-/**
- * Transform backend response to frontend ResultBundle
- * Handles missing/partial fields gracefully
- */
-function transformInferenceResponse(response: InferenceResponse, mode: InferenceMode): ResultBundle {
-  // For v2 mode, backend returns inference_pack_v2 which has detailed structure
-  // For legacy mode, we map simpler response to ResultBundle
-  
-  const now = new Date().toISOString();
+export const preprocessApi = {
+  /**
+   * Run preprocessing on raw data
+   * Handles: noise filtering, outlier detection, interpolation
+   */
+  async preprocess(runId: string, options: any = {}) {
+    const response = await fetch(`${API_BASE}/preprocess/run`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ run_id: runId, options }),
+    });
+    return handleResponse(response);
+  },
 
-  // Stub transformation - in production, map backend fields properly
-  const bundle: ResultBundle = {
-    bundle_id: `result_${Date.now()}`,
-    timestamp: response.created_at || now,
-    mode,
-    summary: {
-      metabolic_state: {
-        label: 'Well-controlled',
-        confidence: 0.82,
-        drivers: ['Stable glucose', 'Normal lipids'],
-        notes: 'Fasting glucose and lipid profile suggest good metabolic control.',
-      },
-      hydration_status: {
-        label: 'Euhydrated',
-        confidence: 0.75,
-        drivers: ['Normal osmolality', 'Stable electrolytes'],
-      },
-      stress_recovery: {
-        label: 'Adequate',
-        confidence: 0.68,
-        drivers: ['Moderate HRV', 'Regular sleep pattern'],
-      },
-      inflammatory_tone: {
-        label: 'Low',
-        confidence: 0.80,
-        drivers: ['Normal CRP', 'Stable WBC'],
-      },
-      renal_stress: {
-        label: 'Minimal',
-        confidence: 0.85,
-        drivers: ['Normal creatinine', 'Normal electrolytes'],
-      },
-    },
-    panels: [
-      {
-        panel_name: 'CMP (Comprehensive Metabolic Panel)',
-        produced_outputs: [
-          {
-            analyte: 'Glucose',
-            value: 96,
-            unit: 'mg/dL',
-            reference_range: { low: 70, high: 100, text: '70-100 mg/dL fasting' },
-            confidence: 0.94,
-            range_estimate: { low: 94, high: 98 },
-            support_type: 'Direct',
-            user_explanation: 'Your fasting blood glucose is normal and stable. This suggests good glucose control.',
-            clinical_notes: 'Measured from blood specimen collected at 08:15 AM.',
-            evidence: {
-              specimen_sources: ['blood_1'],
-              signals_used: ['blood_glucose', 'isf_glucose_agreement'],
-              coherence: { status: 'High', notes: 'Strong agreement between ISF and blood glucose.' },
-              disagreement: { present: false },
-            },
-          },
-        ],
-        suppressed_outputs: [
-          {
-            analyte: 'Insulin',
-            suppression_reason: 'MissingAnchors',
-            plain_english_reason: 'Not enough data to reliably estimate your insulin level.',
-            details: {
-              failed_dependencies: ['fasting_state_confirmation', 'recent_food_intake_log'],
-              notes: 'To estimate insulin, we need to know if you were fasting and recent meal timing.',
-            },
-          },
-        ],
-      },
-      {
-        panel_name: 'CBC (Complete Blood Count)',
-        produced_outputs: [
-          {
-            analyte: 'Hemoglobin',
-            value: 13.8,
-            unit: 'g/dL',
-            reference_range: { low: 13.5, high: 17.5, text: '13.5-17.5 g/dL for males' },
-            confidence: 0.92,
-            range_estimate: { low: 13.6, high: 14.0 },
-            support_type: 'Direct',
-            user_explanation: 'Your hemoglobin level is normal, indicating good oxygen-carrying capacity in your blood.',
-            evidence: {
-              specimen_sources: ['blood_1'],
-              signals_used: ['hemoglobin_measurement'],
-              coherence: { status: 'High' },
-            },
-          },
-        ],
-        suppressed_outputs: [],
-      },
-    ],
-    disclaimers: [
-      'This information is for educational purposes only and not a substitute for professional medical advice.',
-      'Always consult a qualified healthcare provider for diagnosis and treatment.',
-      'If you experience concerning symptoms or critical results, contact a clinician immediately.',
-    ],
-  };
+  /**
+   * Get preprocessing status and results
+   */
+  async getStatus(runId: string) {
+    const response = await fetch(`${API_BASE}/preprocess/status/${runId}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
 
-  return bundle;
-}
+  /**
+   * Get calibration coefficients for a sensor
+   */
+  async getCalibration(runId: string) {
+    const response = await fetch(`${API_BASE}/preprocess/calibration/${runId}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  /**
+   * Apply manual calibration
+   */
+  async applyCalibration(runId: string, calibrationData: any) {
+    const response = await fetch(`${API_BASE}/preprocess/calibration/${runId}`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(calibrationData),
+    });
+    return handleResponse(response);
+  },
+};
+
+// ============================================================================
+// ANALYSIS & FEATURE EXTRACTION
+// ============================================================================
+
+export const analysisApi = {
+  /**
+   * Run analysis pipeline
+   * Extracts features, detects patterns, calculates indices
+   */
+  async analyze(runId: string, options: any = {}) {
+    const response = await fetch(`${API_BASE}/analysis/run`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ run_id: runId, options }),
+    });
+    return handleResponse(response);
+  },
+
+  /**
+   * Get analysis results
+   */
+  async getResults(runId: string) {
+    const response = await fetch(`${API_BASE}/analysis/results/${runId}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  /**
+   * Get extracted features
+   */
+  async getFeatures(runId: string) {
+    const response = await fetch(`${API_BASE}/analysis/features/${runId}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  /**
+   * Get detected anomalies
+   */
+  async getAnomalies(runId: string) {
+    const response = await fetch(`${API_BASE}/analysis/anomalies/${runId}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+};
+
+// ============================================================================
+// INFERENCE (V2 & LEGACY)
+// ============================================================================
+
+export const inferenceApi = {
+  /**
+   * Run inference v2 (recommended)
+   * Full ML pipeline with uncertainty quantification
+   */
+  async runInferenceV2(runId: string) {
+    const response = await fetch(`${API_BASE}/ai/inference/v2`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ run_id: runId }),
+    });
+    const data = await handleResponse(response);
+    console.log('✅ Inference V2 complete:', data);
+    return data;
+  },
+
+  /**
+   * Run legacy inference
+   * Backward compatible with older analysis
+   */
+  async runInferenceLegacy(runId: string) {
+    const response = await fetch(`${API_BASE}/ai/inference`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ run_id: runId }),
+    });
+    const data = await handleResponse(response);
+    console.log('✅ Legacy inference complete:', data);
+    return data;
+  },
+
+  /**
+   * Get inference status
+   */
+  async getStatus(runId: string) {
+    const response = await fetch(`${API_BASE}/ai/inference/status/${runId}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  /**
+   * Get model metadata
+   */
+  async getModelInfo() {
+    const response = await fetch(`${API_BASE}/ai/model/info`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+};
+
+// ============================================================================
+// RESULTS & HISTORY
+// ============================================================================
+
+export const resultsApi = {
+  /**
+   * Get latest results bundle
+   */
+  async fetchLatestResults() {
+    const response = await fetch(`${API_BASE}/results/latest`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  /**
+   * Get specific result bundle
+   */
+  async fetchResultDetails(bundleId: string) {
+    const response = await fetch(`${API_BASE}/results/${bundleId}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  /**
+   * Get results history
+   */
+  async fetchResultsHistory(limit: number = 50) {
+    const response = await fetch(`${API_BASE}/results/history?limit=${limit}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  /**
+   * Export results as PDF
+   */
+  async exportPDF(bundleId: string) {
+    const response = await fetch(`${API_BASE}/results/${bundleId}/export/pdf`, {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('PDF export failed');
+    return response.blob();
+  },
+
+  /**
+   * Export results as JSON
+   */
+  async exportJSON(bundleId: string) {
+    const response = await fetch(`${API_BASE}/results/${bundleId}/export/json`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+};
+
+// ============================================================================
+// FORECASTING (Optional)
+// ============================================================================
+
+export const forecastApi = {
+  /**
+   * Generate forecast for biomarker
+   */
+  async generateForecast(runId: string, biomarker: string, days: number = 7) {
+    const response = await fetch(`${API_BASE}/forecast/generate`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ run_id: runId, biomarker, days }),
+    });
+    return handleResponse(response);
+  },
+
+  /**
+   * Get forecast results
+   */
+  async getForecast(runId: string, biomarker: string) {
+    const response = await fetch(`${API_BASE}/forecast/${runId}/${biomarker}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+};
