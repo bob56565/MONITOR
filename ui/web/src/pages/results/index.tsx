@@ -1,18 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { SkeletonLoader, EmptyState, ToastContainer, StateCard, AnalyteRow, SupportBadge, SuppressionBadge, ConfidenceMeter } from '../../components/results/ResultsComponents';
+import React, { useState } from 'react';
+import { SkeletonLoader, EmptyState, ToastContainer, StateCard } from '../../components/results/ResultsComponents';
 import { useResults, useToasts } from '../../hooks/useResults';
-import { ResultBundle, AnalyteOutput } from '../../types/results';
 
 export const OverviewPage: React.FC<{ mode: 'legacy' | 'v2'; onModeChange: (m: 'legacy' | 'v2') => void }> = ({ mode, onModeChange }) => {
   const { results, loading } = useResults();
   const { toasts, addToast } = useToasts();
 
-  useEffect(() => {
-    if (!results) addToast('No results. Run inference.', 'info');
-  }, [results, addToast]);
-
   if (loading) return <SkeletonLoader count={5} />;
-  if (!results) return <EmptyState title="No Results Yet" description="Run inference to start." cta={{ label: 'Run Inference', onClick: () => addToast('Starting...', 'info') }} />;
+  if (!results) return <EmptyState title="No Results Yet" description="Run inference to start." cta={{ label: 'Run Inference', onClick: () => addToast('info', 'Starting...') }} />;
 
   return (
     <div>
@@ -38,18 +33,12 @@ export const OverviewPage: React.FC<{ mode: 'legacy' | 'v2'; onModeChange: (m: '
 
 export const LabsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [showProduced, setShowProduced] = useState(true);
-  const [showSuppressed, setShowSuppressed] = useState(true);
-  const { toasts, addToast } = useToasts();
+  const { toasts } = useToasts();
 
   return (
     <div>
       <div className="sticky top-0 bg-white p-4 border-b z-10">
         <input type="text" placeholder="Search analyte..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full px-3 py-2 border rounded mb-3" />
-        <div className="flex gap-2">
-          <label className="flex items-center gap-2"><input type="checkbox" checked={showProduced} onChange={(e) => setShowProduced(e.target.checked)} /> Show Produced</label>
-          <label className="flex items-center gap-2"><input type="checkbox" checked={showSuppressed} onChange={(e) => setShowSuppressed(e.target.checked)} /> Show Suppressed</label>
-        </div>
       </div>
       <EmptyState title="No labs loaded" description="Load results first." />
       <ToastContainer toasts={toasts} />
@@ -64,24 +53,18 @@ export const KeyLegendPage: React.FC = () => (
       <div>
         <h2 className="text-lg font-semibold mb-2">Support Types</h2>
         <div className="space-y-2">
-          <p><strong>Direct:</strong> Measured directly from specimen</p>
-          <p><strong>Derived:</strong> Computed from direct measurements</p>
+          <p><strong>Direct:</strong> Measured directly</p>
+          <p><strong>Derived:</strong> Computed from measurements</p>
           <p><strong>Proxy:</strong> Estimated indirectly</p>
-          <p><strong>Relational:</strong> Cross-specimen inference</p>
-          <p><strong>Population-based:</strong> Population priors</p>
         </div>
       </div>
-      <div>
-        <h2 className="text-lg font-semibold mb-2">Confidence</h2>
-        <p>0-33%: Low | 34-66%: Medium | 67-100%: High</p>
-      </div>
-      <div>
-        <h2 className="text-lg font-semibold mb-2">Suppression Reasons</h2>
-        <p><strong>MissingAnchors:</strong> Required measurements not available</p>
-        <p><strong>LowCoherence:</strong> Signals don't agree</p>
-        <p><strong>Interference:</strong> Contamination or measurement error detected</p>
-      </div>
     </div>
+  </div>
+);
+
+export const ResultsLayout: React.FC = () => (
+  <div className="w-full h-full bg-gray-50">
+    <OverviewPage mode="v2" onModeChange={() => {}} />
   </div>
 );
 
