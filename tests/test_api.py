@@ -344,6 +344,22 @@ class TestInference:
         assert "confidence" in data
         assert "steps_ahead" in data
         assert data["steps_ahead"] == 1
+    
+    def test_forecast_with_horizon_steps(self):
+        """Test that horizon_steps parameter produces correct forecast list."""
+        response = client.post(
+            "/ai/forecast",
+            json={
+                "feature_values": [1.0, 1.5, 2.0],
+                "horizon_steps": 5
+            }
+        )
+        assert response.status_code in (200, 201)
+        data = response.json()
+        assert data["steps_ahead"] == 5
+        assert "forecasts" in data
+        assert len(data["forecasts"]) == 5
+        assert data["forecast"] == data["forecasts"][0]
 
 
 class TestEndToEnd:

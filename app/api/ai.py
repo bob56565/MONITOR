@@ -65,10 +65,12 @@ class InferenceReport(BaseModel):
 class ForecastRequest(BaseModel):
     feature_values: list[float]
     steps_ahead: int = 1
+    horizon_steps: int = 1
 
 
 class ForecastResponse(BaseModel):
     forecast: float
+    forecasts: List[float] = []
     confidence: float
     steps_ahead: int
 
@@ -171,11 +173,23 @@ def run_inference_endpoint(
 @router.post("/forecast", response_model=ForecastResponse)
 def forecast_endpoint(request: ForecastRequest):
     """
-    Simple forecast endpoint (stub).
+    Simple forecast endpoint.
+    Uses horizon_steps (or steps_ahead) to generate multi-step forecast.
     """
-    result = forecast_next_step(request.feature_values, request.steps_ahead)
+    # Use horizon_steps if provided, otherwise fall back to steps_ahead
+    steps = max(1, request.horizon_steps or request.steps_ahead)
+    
+    result = forecast_next_step(request.feature_values, steps_ahead=steps)
+    
+    # Ensure forecasts list is populated
+    forecasts = result.get("forecasts", [])
+    if not forecasts and "forecast" in result:
+        # Backward compatibility: if only forecast exists, wrap it
+        forecasts = [result["forecast"]]
+    
     return ForecastResponse(
         forecast=result["forecast"],
+        forecasts=forecasts,
         confidence=result["confidence"],
         steps_ahead=result["steps_ahead"],
     )
