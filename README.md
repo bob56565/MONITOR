@@ -95,6 +95,7 @@ A FastAPI-based backend for sensor data ingestion, preprocessing, and ML inferen
   ```json
   {"calibrated_feature_id": 1}
   ```
+  **Response**: Stable InferenceReport contract with complete schema (see Example Workflow)
 - `POST /ai/forecast` - Simple forecast (no auth required for MVP)
   ```json
   {
@@ -102,6 +103,30 @@ A FastAPI-based backend for sensor data ingestion, preprocessing, and ML inferen
     "steps_ahead": 1
   }
   ```
+
+## InferenceReport Contract
+
+The `/ai/infer` endpoint returns a stable, product-ready `InferenceReport` schema with the following structure:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `trace_id` | string | Unique request identifier (UUID) |
+| `created_at` | string (ISO 8601) | Timestamp of inference creation |
+| `input_summary.specimen_type` | string | Type of specimen/sensor array analyzed |
+| `input_summary.observed_inputs` | array | List of input features used |
+| `input_summary.missing_inputs` | array | List of expected inputs not provided |
+| `inferred[].name` | string | Name of inferred parameter |
+| `inferred[].value` | number | Inferred value |
+| `inferred[].unit` | string | Unit of measurement |
+| `inferred[].confidence` | number | Confidence score (0–1) |
+| `inferred[].method` | string | Method/model used for inference |
+| `abnormal_flags` | array | List of abnormal conditions detected (empty if none) |
+| `assumptions` | array | Explicit list of assumptions made during inference |
+| `limitations` | array | Known limitations of the model/inference |
+| `model_metadata.model_name` | string | Name of the inference model |
+| `model_metadata.model_version` | string | Version of the inference model |
+| `model_metadata.trained_on` | string | Description of training data |
+| `disclaimer` | string | Legal/ethical disclaimer for MVP |
 
 ## Example Workflow
 
@@ -124,11 +149,53 @@ curl -X POST "http://localhost:8000/data/preprocess?user_id=1" \
   -d '{"raw_sensor_id": 1}'
 # Response: {"id": 1, "user_id": 1, "feature_1": -0.816, "feature_2": 0.0, "feature_3": 0.816, "derived_metric": 0.178}
 
-# 4. Infer
+# 4. Infer (Returns InferenceReport with stable contract)
 curl -X POST "http://localhost:8000/ai/infer?user_id=1" \
   -H "Content-Type: application/json" \
   -d '{"calibrated_feature_id": 1}'
-# Response: {"id": 1, "user_id": 1, "prediction": 0.678, "confidence": 0.45, "uncertainty": 0.55}
+# Response:
+# {
+#   "trace_id": "550e8400-e29b-41d4-a716-446655440000",
+#   "created_at": "2026-01-28T12:34:56.789012",
+#   "input_summary": {
+#     "specimen_type": "sensor_array",
+#     "observed_inputs": ["feature_1", "feature_2", "feature_3"],
+#     "missing_inputs": []
+#   },
+#   "inferred": [
+#     {
+#       "name": "primary_prediction",
+#       "value": 0.678,
+#       "unit": "normalized_units",
+#       "confidence": 0.75,
+#       "method": "MVP_linear_model"
+#     },
+#     {
+#       "name": "uncertainty_estimate",
+#       "value": 0.25,
+#       "unit": "probability",
+#       "confidence": 0.8,
+#       "method": "distance_based_heuristic"
+#     }
+#   ],
+#   "abnormal_flags": [],
+#   "assumptions": [
+#     "Features have been calibrated",
+#     "Input data is within expected range",
+#     "Model was trained on similar specimen types"
+#   ],
+#   "limitations": [
+#     "MVP model is linear and does not capture complex interactions",
+#     "Uncertainty estimate is heuristic-based, not Bayesian",
+#     "Limited training data in current MVP phase"
+#   ],
+#   "model_metadata": {
+#     "model_name": "MONITOR_MVP_Inference",
+#     "model_version": "1.0",
+#     "trained_on": "synthetic_calibration_data"
+#   },
+#   "disclaimer": "This is an MVP model for research purposes. Do not use for clinical decisions without validation."
+# }
 ```
 
 ## Project Structure

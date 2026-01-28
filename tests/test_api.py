@@ -242,6 +242,74 @@ class TestInference:
         assert 0 <= data["confidence"] <= 1.0
         assert 0 <= data["uncertainty"] <= 1.0
     
+    def test_infer_response_has_all_required_keys(self):
+        """Test that InferenceReport response includes all required schema fields."""
+        response = client.post(
+            "/ai/infer",
+            json={"calibrated_feature_id": self.calibrated_id},
+            params={"user_id": self.user_id}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Top-level fields
+        required_top_level = [
+            "trace_id",
+            "created_at",
+            "input_summary",
+            "inferred",
+            "abnormal_flags",
+            "assumptions",
+            "limitations",
+            "model_metadata",
+            "disclaimer",
+        ]
+        for field in required_top_level:
+            assert field in data, f"Missing required field: {field}"
+        
+        # input_summary fields
+        assert "specimen_type" in data["input_summary"]
+        assert "observed_inputs" in data["input_summary"]
+        assert "missing_inputs" in data["input_summary"]
+        
+        # model_metadata fields
+        assert "model_name" in data["model_metadata"]
+        assert "model_version" in data["model_metadata"]
+        assert "trained_on" in data["model_metadata"]
+        
+        # inferred array structure
+        assert isinstance(data["inferred"], list)
+        assert len(data["inferred"]) > 0
+        for inferred_item in data["inferred"]:
+            assert "name" in inferred_item
+            assert "value" in inferred_item
+            assert "unit" in inferred_item
+            assert "confidence" in inferred_item
+            assert "method" in inferred_item
+    
+    def test_infer_confidence_values_in_valid_range(self):
+        """Test that all confidence values in inferred array are between 0 and 1."""
+        response = client.post(
+            "/ai/infer",
+            json={"calibrated_feature_id": self.calibrated_id},
+            params={"user_id": self.user_id}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Check that inferred array exists and has items
+        assert "inferred" in data
+        assert isinstance(data["inferred"], list)
+        assert len(data["inferred"]) > 0
+        
+        # Check that all confidence values are between 0 and 1
+        for inferred_item in data["inferred"]:
+            assert "confidence" in inferred_item
+            confidence = inferred_item["confidence"]
+            assert isinstance(confidence, (int, float))
+            assert 0 <= confidence <= 1, f"Confidence {confidence} is not in range [0, 1]"
+
+    
     def test_infer_nonexistent_feature(self):
         response = client.post(
             "/ai/infer",

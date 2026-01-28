@@ -7,68 +7,66 @@ from app.db.session import get_db
 from app.models import User, RawSensorData, CalibratedFeatures
 from app.features.calibration import calibrate_sensor_readings, get_calibration_metadata
 from app.features.derived import compute_derived_metric
+from app.api.deps import get_current_user
 
 router = APIRouter(prefix="/data", tags=["data"])
 
 
 class RawDataRequest(BaseModel):
-    sensor_value_1: float
-    sensor_value_2: float
-    sensor_value_3: float
+    timestamp: Optional[str] = None
+    specimen_type: Optional[str] = None
+    observed: Optional[dict] = None
+    context: Optional[dict] = None
 
 
 class RawDataResponse(BaseModel):
     id: int
-    user_id: int
-    timestamp: datetime
-    sensor_value_1: float
-    sensor_value_2: float
-    sensor_value_3: float
+    timestamp: Optional[datetime]
+    specimen_type: Optional[str]
+    observed: Optional[dict]
+    context: Optional[dict]
+
+    class Config:
+        from_attributes = True
 
 
 class PreprocessRequest(BaseModel):
-    raw_sensor_id: int
+    raw_id: int
 
 
 class PreprocessResponse(BaseModel):
     id: int
-    user_id: int
-    feature_1: float
-    feature_2: float
-    feature_3: float
-    derived_metric: float
+    calibrated_metric: float
+    features: dict
     created_at: datetime
 
+    class Config:
+        from_attributes = True
 
-@router.post("/raw", response_model=RawDataResponse)
+
+@router.post("/raw", response_model=RawDataResponse, status_code=201)
 def ingest_raw_data(
     request: RawDataRequest,
     db: Session = Depends(get_db),
-    user_id: int = None,
+    current_user: User = Depends(get_current_user),
 ):
     """Ingest raw sensor data."""
-    if user_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not authenticated",
-        )
-    
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
+    # Extract sensor values from observed dict or use defaults
+    observed = request.observed or {}
+    glucose = observed.get("glucose_mg_dl", 100.0)
+    lactate = observed.get("lactate_mmol_l", 1.5)
+    context = request.context or {}
     
     raw_data = RawSensorData(
-        user_id=user_id,
-        sensor_value_1=request.sensor_value_1,
-        sensor_value_2=request.sensor_value_2,
-        sensor_value_3=request.sensor_value_3,
+        user_id=current_user.id,
+        timestamp=datetime.fromisoformat(request.timestamp.replace('Z', '+00:00')) if request.timestamp else datetime.utcnow(),
+        sensor_value_1=float(glucose),
+        sensor_value_2=float(lactate),
+        sensor_value_3=0.0,
         raw_data={
-            "v1": request.sensor_value_1,
-            "v2": request.sensor_value_2,
-            "v3": request.sensor_value_3,
+            "specimen_type": request.specimen_type,
+            "observed": observed,
+            "context": context,
         }
     )
     db.add(raw_data)
@@ -77,11 +75,10 @@ def ingest_raw_data(
     
     return RawDataResponse(
         id=raw_data.id,
-        user_id=raw_data.user_id,
         timestamp=raw_data.timestamp,
-        sensor_value_1=raw_data.sensor_value_1,
-        sensor_value_2=raw_data.sensor_value_2,
-        sensor_value_3=raw_data.sensor_value_3,
+        specimen_type=request.specimen_type,
+        observed=observed,
+        context=context,
     )
 
 
@@ -89,20 +86,14 @@ def ingest_raw_data(
 def preprocess_data(
     request: PreprocessRequest,
     db: Session = Depends(get_db),
-    user_id: int = None,
+    current_user: User = Depends(get_current_user),
 ):
     """
     Preprocess raw sensor data: calibration + feature extraction.
     """
-    if user_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not authenticated",
-        )
-    
     raw_data = db.query(RawSensorData).filter(
-        RawSensorData.id == request.raw_sensor_id,
-        RawSensorData.user_id == user_id,
+        RawSensorData.id == request.raw_id,
+        RawSensorData.user_id == current_user.id,
     ).first()
     
     if not raw_data:
@@ -120,8 +111,8 @@ def preprocess_data(
     
     # Store calibrated features
     cal_features = CalibratedFeatures(
-        user_id=user_id,
-        raw_sensor_id=request.raw_sensor_id,
+        user_id=current_user.id,
+        raw_sensor_id=request.raw_id,
         feature_1=calibrated[0],
         feature_2=calibrated[1],
         feature_3=calibrated[2],
@@ -133,10 +124,11 @@ def preprocess_data(
     
     return PreprocessResponse(
         id=cal_features.id,
-        user_id=cal_features.user_id,
-        feature_1=cal_features.feature_1,
-        feature_2=cal_features.feature_2,
-        feature_3=cal_features.feature_3,
-        derived_metric=cal_features.derived_metric,
+        calibrated_metric=cal_features.derived_metric,
+        features={
+            "feature_1": cal_features.feature_1,
+            "feature_2": cal_features.feature_2,
+            "feature_3": cal_features.feature_3,
+        },
         created_at=cal_features.created_at,
     )
