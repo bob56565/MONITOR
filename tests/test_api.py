@@ -439,6 +439,108 @@ class TestEndToEnd:
         assert "inferred" in inference_data
 
 
+class TestM5PDFReports:
+    """Test Milestone 5: PDF Report Generation."""
+    
+    def setup_method(self):
+        """Create a user and run pipeline for each test."""
+        email = generate_email()
+        response = client.post(
+            "/auth/signup",
+            json={"email": email, "password": "password123"}
+        )
+        self.user_id = response.json()["user_id"]
+        self.token = (response.json().get("token") or response.json().get("access_token"))
+        
+        # Ingest and preprocess to get calibrated_id
+        ingest_response = client.post(
+            "/data/raw",
+            headers=auth_headers(self.token),
+            json={
+                "timestamp": "2026-01-27T00:00:00Z",
+                "specimen_type": "blood",
+                "observed": {"glucose_mg_dl": 120.0, "lactate_mmol_l": 2.0},
+                "context": {"age": 30, "sex": "M", "fasting": False}
+            }
+        )
+        self.raw_id = ingest_response.json().get("raw_id") or ingest_response.json().get("id")
+        
+        preprocess_response = client.post(
+            "/data/preprocess",
+            headers=auth_headers(self.token),
+            json={"raw_id": self.raw_id}
+        )
+        self.calibrated_id = preprocess_response.json().get("calibrated_id") or preprocess_response.json().get("id")
+    
+    def test_pdf_report_with_calibrated_id(self):
+        """Test PDF generation with calibrated_id."""
+        response = client.post(
+            "/reports/pdf",
+            headers=auth_headers(self.token),
+            json={"calibrated_id": self.calibrated_id}
+        )
+        assert response.status_code in (200, 201)
+        assert response.headers["content-type"] == "application/pdf"
+        assert len(response.content) > 0
+        # Check for PDF signature
+        assert response.content[:4] == b"%PDF"
+    
+    def test_pdf_report_with_raw_id(self):
+        """Test PDF generation with raw_id."""
+        response = client.post(
+            "/reports/pdf",
+            headers=auth_headers(self.token),
+            json={"raw_id": self.raw_id}
+        )
+        assert response.status_code in (200, 201)
+        assert response.headers["content-type"] == "application/pdf"
+        assert len(response.content) > 0
+        assert response.content[:4] == b"%PDF"
+    
+    def test_pdf_report_with_both_ids(self):
+        """Test PDF generation with both raw_id and calibrated_id."""
+        response = client.post(
+            "/reports/pdf",
+            headers=auth_headers(self.token),
+            json={
+                "raw_id": self.raw_id,
+                "calibrated_id": self.calibrated_id
+            }
+        )
+        assert response.status_code in (200, 201)
+        assert response.headers["content-type"] == "application/pdf"
+        assert len(response.content) > 0
+        assert response.content[:4] == b"%PDF"
+    
+    def test_pdf_report_missing_ids_fails(self):
+        """Test PDF generation fails when no IDs provided."""
+        response = client.post(
+            "/reports/pdf",
+            headers=auth_headers(self.token),
+            json={}
+        )
+        assert response.status_code == 422
+    
+    def test_pdf_report_unauthenticated_fails(self):
+        """Test PDF generation fails without authentication."""
+        response = client.post(
+            "/reports/pdf",
+            json={"calibrated_id": self.calibrated_id}
+        )
+        assert response.status_code == 401
+    
+    def test_pdf_report_invalid_calibrated_id(self):
+        """Test PDF generation with non-existent calibrated_id."""
+        response = client.post(
+            "/reports/pdf",
+            headers=auth_headers(self.token),
+            json={"calibrated_id": 9999}
+        )
+        # Should still generate PDF (just with missing data sections)
+        assert response.status_code in (200, 201)
+        assert response.headers["content-type"] == "application/pdf"
+
+
 class TestM4ContractUnification:
     """Test Milestone 4: API Contract Unification for forecast and infer."""
     

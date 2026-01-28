@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import auth, data, ai
+from app.api import auth, data, ai, reports
 from app.db.base import Base
 from app.db.session import engine
 
@@ -37,6 +37,7 @@ def health_check():
 app.include_router(auth.router)
 app.include_router(data.router)
 app.include_router(ai.router)
+app.include_router(reports.router)
 
 if __name__ == "__main__":
     import uvicorn
