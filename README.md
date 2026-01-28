@@ -62,6 +62,44 @@ A FastAPI-based backend for sensor data ingestion, preprocessing, and ML inferen
   - **README**: Updated with Milestones, API documentation, and exact runnable commands
 - **Tests**: All 37 tests pass; CI-ready with deterministic validation
 
+### Milestone 7 Phase 3 Part 1: Multi-Specimen Ingestion Upgrade (Non-Breaking)
+- **Objective**: Support multi-specimen raw data ingestion with provenance + missingness tracking
+- **What's New**:
+  - **RunV2 Schema** (`app/models/run_v2.py`):
+    - RunV2: superset model supporting multi-specimen payloads + always-on non-lab inputs
+    - SpecimenRecord: one specimen per record (supports ISF, Blood Capillary, Blood Venous, Saliva, Sweat, Urine Spot)
+    - Comprehensive specimen variable maps (ISF: glucose/lactate/electrolytes; Blood: CMP/CBC/Lipids/Endocrine/Vitamins/Inflammation/Autoimmune; Saliva: cortisol/amylase; Sweat: electrolytes/sweat_rate; Urine: specific_gravity/protein/glucose/ketones/etc.)
+    - MissingnessRecord: explicit tracking of is_missing, missing_type, missing_impact, provenance, confidence for every variable
+    - Enums: SpecimenTypeEnum, MissingTypeEnum, MissingImpactEnum, ProvenanceEnum, SupportTypeEnum
+  - **Always-On Non-Lab Inputs** (NonLabInputs):
+    - Demographics: age, sex_at_birth
+    - Anthropometrics: height_cm, weight_kg, waist_cm, body_fat_pct
+    - Vitals & Physiology: heart_rate, hrv, bp_systolic, bp_diastolic, temperature_c
+    - Sleep & Activity: sleep_duration_hr, sleep_quality, activity_level
+    - Intake & Exposure: fluid_intake, sodium_intake, alcohol_units, caffeine_mg, nicotine_use
+    - Supplements & Medications: arrays with dose/frequency/adherence
+  - **Qualitative Inputs & Encoding** (QualitativeInputs, QualEncodingOutputs):
+    - Structured qualitative data: stress, sleep, diet, symptoms, hormonal_context
+    - Encoding outputs: effect_vector (metabolic_pressure, inflammatory_tone, dehydration_pressure, endocrine_shift, measurement_interference) + uncertainty
+  - **API Endpoints**:
+    - `POST /runs/v2`: Create RunV2 with multiple specimens (validates specimen presence, missingness records)
+    - `GET /runs/v2/{run_id}`: Retrieve full RunV2 with all details (auth-gated to owner only)
+  - **Compatibility Adapter** (`legacy_raw_ingestion_to_runv2_adapter`):
+    - Legacy `/data/raw` endpoint automatically wraps single glucose/lactate entry into RunV2
+    - Wrapping is silent (no breaking change to legacy endpoint response)
+    - Links to legacy raw_id for audit trail
+  - **DB Model**: RunV2Record table with run_id, user_id, payload (JSON), schema_version, specimen_count
+- **Tests**: 13 new tests in `tests/test_runv2.py` covering:
+  - Single and multiple specimen creation
+  - Validation (missing specimens, missing missingness records)
+  - Retrieval and authorization checks
+  - Missingness tracking (present vs. missing values)
+  - Provenance tracking (measured vs. proxy)
+  - Non-lab inputs (all sections, empty allowed)
+  - All specimen types
+- **Backward Compatibility**: All existing 37 tests pass unchanged; legacy `/data/raw` works identically
+- **Status**: ✓ Code complete, ✓ Tests passing (13/13), ✓ Backward compatible
+
 
 ## Quick Start
 
@@ -118,6 +156,7 @@ A FastAPI-based backend for sensor data ingestion, preprocessing, and ML inferen
    ```
 
    API will be available at `http://localhost:8000`
+
    PostgreSQL will be available at `localhost:5432`
 
 2. **Run migrations** (if using Alembic):
@@ -153,6 +192,111 @@ A FastAPI-based backend for sensor data ingestion, preprocessing, and ML inferen
   ```json
   {"raw_sensor_id": 1}
   ```
+
+### Multi-Specimen Ingestion (M7 Part 1)
+
+#### **POST /runs/v2** - Create RunV2 with multiple specimens and non-lab inputs
+**Authentication**: Required (Bearer token)
+
+**Request** (comprehensive multi-specimen example):
+```json
+{
+  "timezone": "UTC",
+  "specimens": [
+    {
+      "specimen_id": "uuid-123",
+      "specimen_type": "ISF",
+      "collected_at": "2024-01-28T10:30:00",
+      "source_detail": "fingerstick",
+      "raw_values": {
+        "glucose": 120.5,
+        "lactate": 1.8,
+        "sodium_na": 140.0
+      },
+      "units": {
+        "glucose": "mg/dL",
+        "lactate": "mmol/L",
+        "sodium_na": "mmol/L"
+      },
+      "missingness": {
+        "glucose": {
+          "is_missing": false,
+          "missing_type": null,
+          "missing_impact": "neutral",
+          "provenance": "measured",
+          "confidence_0_1": 1.0
+        },
+        "lactate": {
+          "is_missing": false,
+          "missing_impact": "neutral",
+          "provenance": "measured",
+          "confidence_0_1": 1.0
+        },
+        "sodium_na": {
+          "is_missing": false,
+          "missing_impact": "neutral",
+          "provenance": "measured",
+          "confidence_0_1": 1.0
+        }
+      },
+      "notes": "Normal collection"
+    }
+  ],
+  "non_lab_inputs": {
+    "demographics": {
+      "age": 45,
+      "sex_at_birth": "male"
+    },
+    "anthropometrics": {
+      "height_cm": 180,
+      "weight_kg": 85
+    },
+    "vitals_physiology": {
+      "heart_rate": 72,
+      "bp_systolic": 125,
+      "bp_diastolic": 80
+    }
+  }
+}
+```
+
+**Response**:
+```json
+{
+  "run_id": "uuid-abc123",
+  "user_id": "user-123",
+  "created_at": "2024-01-28T10:30:00",
+  "schema_version": "runv2.1",
+  "specimen_count": 1,
+  "specimens": [
+    {
+      "specimen_id": "uuid-123",
+      "specimen_type": "ISF",
+      "collected_at": "2024-01-28T10:30:00",
+      "variable_count": 3
+    }
+  ]
+}
+```
+
+#### **GET /runs/v2/{run_id}** - Retrieve RunV2 details
+**Authentication**: Required (Bearer token)
+
+**Response**: Full RunV2 with all specimens, non-lab inputs, qualitative inputs, and encoding outputs (JSON payload)
+
+**Supported Specimen Types**:
+- `ISF`: Glucose, Lactate, Electrolytes (Na, K, Cl), pH, Proxy signals (CRP, IL6, Drug)
+- `BLOOD_CAPILLARY`: CMP, CBC, Lipids, Endocrine, Vitamins/Nutrition, Inflammation, Autoimmune
+- `BLOOD_VENOUS`: CMP, CBC, Lipids, Endocrine, Vitamins/Nutrition, Inflammation, Autoimmune
+- `SALIVA`: Cortisol, Alpha-amylase, pH, Flow rate, Dryness score, Alcohol/Nicotine flags
+- `SWEAT`: Electrolytes, Sweat rate, Skin temp, Exertion level
+- `URINE_SPOT`: Specific gravity, pH, Protein, Glucose, Ketones, Blood, Leukocyte esterase, Nitrite, UACR, Microalbumin
+
+**Missingness & Provenance Tracking**:
+- Every value has explicit `missingness` record: `is_missing`, `missing_type`, `missing_impact`, `provenance`, `confidence_0_1`
+- Missing types: `not_collected`, `user_skipped`, `biologically_unavailable`, `temporarily_unavailable`, `sensor_unavailable`, `not_applicable`
+- Missing impact: `neutral`, `confidence_penalty`, `inference_blocker`
+- Provenance: `measured`, `direct`, `proxy`, `inferred`, `population`, `relational`
 
 ### AI/ML (Unified API Contracts — M4)
 
