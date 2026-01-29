@@ -24,7 +24,7 @@ class MicronutrientVitaminInference:
     @staticmethod
     def compute_vitamin_d_sufficiency_likelihood(
         db: Session,
-        submission_id: int,
+        submission_id: str,
         user_id: int
     ) -> OutputLineItem:
         """Vitamin D Sufficiency Likelihood (≥30 ng/mL)"""
@@ -37,7 +37,7 @@ class MicronutrientVitaminInference:
         likelihood = 40.0  # Population baseline (many deficient)
         
         # Anchor to lab
-        if vit_d_lab and vit_d_lab['value']:
+        if vit_d_lab and vit_d_lab.get('value') is not None:
             if vit_d_lab['value'] >= 30:
                 likelihood = 85.0
             elif vit_d_lab['value'] >= 20:
@@ -62,7 +62,7 @@ class MicronutrientVitaminInference:
             output_type=OutputType.INFERRED_TIGHT if has_anchor else OutputType.INFERRED_WIDE,
             completeness_score=0.70,
             anchor_quality=0.9 if has_anchor else 0.3,
-            recency_days=vit_d_lab['days_old'] if vit_d_lab else 180,
+            recency_days=vit_d_lab.get('days_old', 180) if vit_d_lab else 180,
             signal_quality=0.8
         )
         
@@ -79,7 +79,7 @@ class MicronutrientVitaminInference:
             what_increases_confidence=confidence_result['what_increases_confidence'],
             safe_action_suggestion="If likelihood <60%, consider testing 25(OH)D and supplementation (1000-2000 IU daily).",
             input_chain=f"{'Vit D lab' if vit_d_lab else 'No vit D lab'} + activity + supplementation status",
-            input_references={'vit_d_upload_id': vit_d_lab['upload_id'] if vit_d_lab else None},
+            input_references={'vit_d_upload_id': vit_d_lab.get('upload_id') if vit_d_lab else None},
             methodologies_used=[
                 "Bayesian update (prior lab + lifestyle modifiers)",
                 "Rule constraints (supplementation → higher likelihood)",
@@ -99,7 +99,7 @@ class MicronutrientVitaminInference:
     @staticmethod
     def compute_b12_functional_adequacy_score(
         db: Session,
-        submission_id: int,
+        submission_id: str,
         user_id: int
     ) -> OutputLineItem:
         """B12 Functional Adequacy Score"""
@@ -112,7 +112,7 @@ class MicronutrientVitaminInference:
         adequacy = 60.0  # Baseline
         
         # Anchor to lab
-        if b12_lab and b12_lab['value']:
+        if b12_lab and b12_lab.get('value') is not None:
             if b12_lab['value'] >= 400:
                 adequacy = 85.0
             elif b12_lab['value'] >= 200:
@@ -143,7 +143,7 @@ class MicronutrientVitaminInference:
             output_type=OutputType.INFERRED_TIGHT if has_anchor else OutputType.INFERRED_WIDE,
             completeness_score=0.70,
             anchor_quality=0.9 if has_anchor else 0.3,
-            recency_days=b12_lab['days_old'] if b12_lab else 180,
+            recency_days=b12_lab.get('days_old', 180) if b12_lab else 180,
             signal_quality=0.8
         )
         
@@ -160,7 +160,7 @@ class MicronutrientVitaminInference:
             what_increases_confidence=confidence_result['what_increases_confidence'],
             safe_action_suggestion="If score <50 (especially with metformin/PPI), consider B12 testing and supplementation.",
             input_chain=f"{'B12 lab' if b12_lab else 'No B12 lab'} + medications (metformin/PPI) + diet",
-            input_references={'b12_upload_id': b12_lab['upload_id'] if b12_lab else None},
+            input_references={'b12_upload_id': b12_lab.get('upload_id') if b12_lab else None},
             methodologies_used=[
                 "Bayesian network (diet/meds → deficiency risk)",
                 "Rule constraints (metformin/PPI → lower score)",
@@ -180,7 +180,7 @@ class MicronutrientVitaminInference:
     @staticmethod
     def compute_iron_utilization_status_class(
         db: Session,
-        submission_id: int,
+        submission_id: str,
         user_id: int
     ) -> OutputLineItem:
         """Iron Utilization Status Class (deficient/functional/overload)"""
@@ -197,14 +197,14 @@ class MicronutrientVitaminInference:
         # Classification
         status = "functional"  # Default
         
-        if ferritin and ferritin['value']:
+        if ferritin and ferritin.get('value') is not None:
             if ferritin['value'] < 30:
                 status = "deficient"
             elif ferritin['value'] > 300:
                 status = "overload_risk"
         
         # Transferrin saturation (if available)
-        if transferrin_sat and transferrin_sat['value']:
+        if transferrin_sat and transferrin_sat.get('value') is not None:
             if transferrin_sat['value'] < 15:
                 status = "deficient"
             elif transferrin_sat['value'] > 45:
@@ -256,7 +256,7 @@ class MicronutrientVitaminInference:
             what_increases_confidence=confidence_result['what_increases_confidence'],
             safe_action_suggestion=f"Status is '{status}'. If deficient, consider iron supplementation. If overload risk, consult for hemochromatosis workup.",
             input_chain=f"Ferritin {'+ transferrin sat' if transferrin_sat else ''}",
-            input_references={'ferritin_upload_id': ferritin['upload_id'] if ferritin else None},
+            input_references={'ferritin_upload_id': ferritin.get('upload_id') if ferritin else None},
             methodologies_used=[
                 "Decision rules (iron study pattern interpretation)",
                 "Bayesian with inflammation adjustment (if hsCRP available)",
@@ -276,7 +276,7 @@ class MicronutrientVitaminInference:
     @staticmethod
     def compute_magnesium_adequacy_proxy(
         db: Session,
-        submission_id: int,
+        submission_id: str,
         user_id: int
     ) -> OutputLineItem:
         """Magnesium Adequacy Proxy"""
@@ -289,7 +289,7 @@ class MicronutrientVitaminInference:
         adequacy = 60.0  # Baseline
         
         # Anchor to lab (though serum Mg not perfect functional marker)
-        if mag_lab and mag_lab['value']:
+        if mag_lab and mag_lab.get('value') is not None:
             if mag_lab['value'] >= 2.0:
                 adequacy = 75.0
             elif mag_lab['value'] < 1.7:
@@ -317,7 +317,7 @@ class MicronutrientVitaminInference:
             output_type=OutputType.INFERRED_WIDE,  # Serum Mg not great marker
             completeness_score=0.60,
             anchor_quality=0.6 if has_anchor else 0.3,
-            recency_days=mag_lab['days_old'] if mag_lab else 180,
+            recency_days=mag_lab.get('days_old', 180) if mag_lab else 180,
             signal_quality=0.7
         )
         
@@ -354,7 +354,7 @@ class MicronutrientVitaminInference:
     @staticmethod
     def compute_micronutrient_risk_summary(
         db: Session,
-        submission_id: int,
+        submission_id: str,
         user_id: int
     ) -> OutputLineItem:
         """Micronutrient Risk Summary (top 3 deficiencies by likelihood)"""

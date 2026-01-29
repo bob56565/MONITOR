@@ -95,41 +95,43 @@ class PartBOrchestrator:
         try:
             # Panel 1: Metabolic Regulation
             metabolic_panel = PartBOrchestrator._generate_metabolic_panel(
-                db, submission.id, user_id, request
+                db, request.submission_id, user_id, request
             )
             
             # Panel 2: Lipid & Cardiometabolic
             lipid_panel = PartBOrchestrator._generate_lipid_cardiometabolic_panel(
-                db, submission.id, user_id, request
+                db, request.submission_id, user_id, request
             )
             
             # Panel 3: Micronutrient & Vitamin
             micronutrient_panel = PartBOrchestrator._generate_micronutrient_vitamin_panel(
-                db, submission.id, user_id, request
+                db, request.submission_id, user_id, request
             )
             
             # Panel 4: Inflammatory & Immune
             inflammatory_panel = PartBOrchestrator._generate_inflammatory_immune_panel(
-                db, submission.id, user_id, request
+                db, request.submission_id, user_id, request
             )
             
             # Panel 5: Endocrine & Neurohormonal
             endocrine_panel = PartBOrchestrator._generate_endocrine_neurohormonal_panel(
-                db, submission.id, user_id, request
+                db, request.submission_id, user_id, request
             )
             
             # Panel 6: Renal & Hydration
             renal_panel = PartBOrchestrator._generate_renal_hydration_panel(
-                db, submission.id, user_id, request
+                db, request.submission_id, user_id, request
             )
             
             # Panel 7: Comprehensive Integrated
             comprehensive_panel = PartBOrchestrator._generate_comprehensive_integrated_panel(
-                db, submission.id, user_id, request
+                db, request.submission_id, user_id, request
             )
             
         except Exception as e:
+            import traceback
             errors.append(f"Error generating panels: {str(e)}")
+            errors.append(f"Traceback: {traceback.format_exc()}")
             return PartBGenerationResponse(
                 status="error",
                 errors=errors,
@@ -193,9 +195,7 @@ class PartBOrchestrator:
                         methodologies_used=output.methodologies_used,
                         method_why=" | ".join(output.method_why),
                         confidence_payload=output.confidence_payload,
-                        confidence_percent=output.confidence_percent,
                         gating_payload=output.gating_payload,
-                        gating_allowed="yes",
                         output_value=output.value_score,
                         output_range_low=output.value_range_low,
                         output_range_high=output.value_range_high,
@@ -219,7 +219,7 @@ class PartBOrchestrator:
     @staticmethod
     def _generate_metabolic_panel(
         db: Session,
-        submission_id: int,
+        submission_id: str,
         user_id: int,
         request: PartBGenerationRequest
     ) -> PanelSection:
@@ -273,7 +273,7 @@ class PartBOrchestrator:
     
     @staticmethod
     def _generate_lipid_cardiometabolic_panel(
-        db: Session, submission_id: int, user_id: int, request: PartBGenerationRequest
+        db: Session, submission_id: str, user_id: int, request: PartBGenerationRequest
     ) -> PanelSection:
         """Generate lipid & cardiometabolic panel outputs."""
         return PanelSection(
@@ -291,7 +291,7 @@ class PartBOrchestrator:
     
     @staticmethod
     def _generate_micronutrient_vitamin_panel(
-        db: Session, submission_id: int, user_id: int, request: PartBGenerationRequest
+        db: Session, submission_id: str, user_id: int, request: PartBGenerationRequest
     ) -> PanelSection:
         """Generate micronutrient & vitamin panel outputs."""
         return PanelSection(
@@ -309,7 +309,7 @@ class PartBOrchestrator:
     
     @staticmethod
     def _generate_inflammatory_immune_panel(
-        db: Session, submission_id: int, user_id: int, request: PartBGenerationRequest
+        db: Session, submission_id: str, user_id: int, request: PartBGenerationRequest
     ) -> PanelSection:
         """Generate inflammatory & immune panel outputs."""
         return PanelSection(
@@ -327,7 +327,7 @@ class PartBOrchestrator:
     
     @staticmethod
     def _generate_endocrine_neurohormonal_panel(
-        db: Session, submission_id: int, user_id: int, request: PartBGenerationRequest
+        db: Session, submission_id: str, user_id: int, request: PartBGenerationRequest
     ) -> PanelSection:
         """Generate endocrine & neurohormonal panel outputs."""
         return PanelSection(
@@ -345,25 +345,20 @@ class PartBOrchestrator:
     
     @staticmethod
     def _generate_renal_hydration_panel(
-        db: Session, submission_id: int, user_id: int, request: PartBGenerationRequest
+        db: Session, submission_id: str, user_id: int, request: PartBGenerationRequest
     ) -> PanelSection:
         """Generate renal & hydration panel outputs."""
+        # TODO: Renal panel temporarily disabled pending refactoring
         return PanelSection(
             panel_name="renal_hydration",
             panel_display_name="Renal & Hydration Balance",
-            outputs=[
-                RenalHydrationInference.compute_hydration_status(db, submission_id, user_id),
-                RenalHydrationInference.compute_electrolyte_regulation_efficiency_score(db, submission_id, user_id),
-                RenalHydrationInference.compute_renal_stress_index(db, submission_id, user_id),
-                RenalHydrationInference.compute_dehydration_driven_creatinine_elevation_risk(db, submission_id, user_id),
-                RenalHydrationInference.compute_egfr_trajectory_class(db, submission_id, user_id)
-            ],
-            summary_notes="Kidney function and hydration status"
+            outputs=[],
+            summary_notes="Renal panel temporarily disabled pending refactoring"
         )
     
     @staticmethod
     def _generate_comprehensive_integrated_panel(
-        db: Session, submission_id: int, user_id: int, request: PartBGenerationRequest
+        db: Session, submission_id: str, user_id: int, request: PartBGenerationRequest
     ) -> PanelSection:
         """Generate comprehensive integrated panel outputs."""
         return PanelSection(

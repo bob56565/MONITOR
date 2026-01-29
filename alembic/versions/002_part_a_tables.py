@@ -13,7 +13,7 @@ from sqlalchemy.dialects import sqlite
 
 # revision identifiers, used by Alembic.
 revision = '002_part_a_tables'
-down_revision = None  # Will be '001_initial' once 001 is populated
+down_revision = '001_base_tables'  # Updated to depend on 001
 branch_labels = None
 depends_on = None
 

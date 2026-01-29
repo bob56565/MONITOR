@@ -93,10 +93,11 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/profile", response_model=ProfileResponse)
-def profile(current_user: User = Depends(get_current_user)):
-    """Return current authenticated user profile."""
+def get_profile(current_user: User = Depends(get_current_user)):
+    """Get current user's profile. Used for token validation."""
     return ProfileResponse(
         user_id=current_user.id,
         email=current_user.email,
         name=current_user.name,
     )
+

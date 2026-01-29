@@ -23,7 +23,7 @@ class InflammatoryImmuneInference:
     @staticmethod
     def compute_chronic_inflammation_index(
         db: Session,
-        submission_id: int,
+        submission_id: str,
         user_id: int
     ) -> OutputLineItem:
         """Chronic Inflammation Index"""
@@ -40,26 +40,26 @@ class InflammatoryImmuneInference:
         index = 30.0  # Baseline
         
         # hsCRP (strongest biomarker)
-        if hscrp and hscrp['value']:
+        if hscrp and hscrp.get('value') is not None:
             if hscrp['value'] > 3.0:
                 index += 30
             elif hscrp['value'] > 1.0:
                 index += 15
         
         # Elevated resting HR (inflammation proxy)
-        if hr_vitals and hr_vitals.get('mean', 0) > 75:
+        if hr_vitals and hr_vitals.get('mean') is not None and hr_vitals['mean'] > 75:
             index += 10
         
         # Reduced HRV (autonomic dysfunction from inflammation)
-        if hrv and hrv.get('mean', 100) < 50:
+        if hrv and hrv.get('mean') is not None and hrv['mean'] < 50:
             index += 15
         
         # Elevated lactate (metabolic stress)
-        if lactate_data and lactate_data['mean'] > 2.0:
+        if lactate_data and lactate_data.get('mean') is not None and lactate_data['mean'] > 2.0:
             index += 10
         
         # Sleep debt (increases inflammation)
-        if soap and soap.get('sleep_duration', 8) < 6:
+        if soap and soap.get('sleep_duration') is not None and soap['sleep_duration'] < 6:
             index += 10
         
         index = min(100, index)
@@ -70,7 +70,7 @@ class InflammatoryImmuneInference:
             output_type=OutputType.INFERRED_TIGHT if has_anchor else OutputType.INFERRED_WIDE,
             completeness_score=0.75,
             anchor_quality=0.9 if has_anchor else 0.5,
-            recency_days=hscrp['days_old'] if hscrp else 90,
+            recency_days=hscrp.get('days_old', 90) if hscrp else 90,
             signal_quality=0.8
         )
         
@@ -87,7 +87,7 @@ class InflammatoryImmuneInference:
             what_increases_confidence=confidence_result['what_increases_confidence'],
             safe_action_suggestion="If index >60, consider hsCRP test and anti-inflammatory lifestyle (diet, sleep, stress management).",
             input_chain=f"{'hsCRP lab' if hscrp else 'No hsCRP'} + HR + HRV + lactate + sleep",
-            input_references={'hscrp_upload_id': hscrp['upload_id'] if hscrp else None},
+            input_references={'hscrp_upload_id': hscrp.get('upload_id') if hscrp else None},
             methodologies_used=[
                 "Composite index (HRV + HR + sleep + lactate + hsCRP)",
                 "Mixed-effects regression (per-user baseline)",
@@ -107,7 +107,7 @@ class InflammatoryImmuneInference:
     @staticmethod
     def compute_acute_vs_chronic_pattern_classifier(
         db: Session,
-        submission_id: int,
+        submission_id: str,
         user_id: int
     ) -> OutputLineItem:
         """Acute vs Chronic Inflammation Pattern"""
@@ -119,16 +119,16 @@ class InflammatoryImmuneInference:
         pattern = "baseline"  # Default
         
         # Acute: sudden spike in HR + fever
-        if hr_vitals and hr_vitals.get('max', 0) > 100:
+        if hr_vitals and (hr_vitals.get('max') or 0) > 100:
             pattern = "acute"
         
-        if temp_vitals and temp_vitals.get('max', 0) > 38.0:  # 100.4°F
+        if temp_vitals and (temp_vitals.get('max') or 0) > 38.0:  # 100.4°F
             pattern = "acute"
         
         # Chronic: sustained elevation over weeks
-        if hr_vitals and hr_vitals.get('mean', 0) > 80:
+        if hr_vitals and (hr_vitals.get('mean') or 0) > 80:
             hr_long = PartADataHelper.get_vitals_summary(db, submission.id, 'heart_rate', days_back=30)
-            if hr_long and hr_long.get('mean', 0) > 80:
+            if hr_long and (hr_long.get('mean') or 0) > 80:
                 pattern = "chronic"
         
         confidence_result = confidence_engine.compute_confidence(
@@ -171,7 +171,7 @@ class InflammatoryImmuneInference:
     @staticmethod
     def compute_inflammation_driven_ir_modifier(
         db: Session,
-        submission_id: int,
+        submission_id: str,
         user_id: int
     ) -> OutputLineItem:
         """Inflammation-Driven IR Modifier"""
@@ -183,9 +183,9 @@ class InflammatoryImmuneInference:
         # Modifier score (how much inflammation worsens IR)
         modifier = 0.0  # No effect
         
-        if hscrp and hscrp['value'] and glucose_data:
+        if hscrp and hscrp.get('value') is not None and glucose_data:
             # High inflammation + high glucose variability = synergistic IR
-            if hscrp['value'] > 2.0 and glucose_data['cv'] > 0.36:
+            if hscrp['value'] > 2.0 and glucose_data.get('cv') is not None and glucose_data['cv'] > 0.36:
                 modifier = 25.0
             elif hscrp['value'] > 1.0:
                 modifier = 10.0
@@ -196,7 +196,7 @@ class InflammatoryImmuneInference:
             output_type=OutputType.INFERRED_WIDE,
             completeness_score=0.70,
             anchor_quality=0.8 if has_anchor else 0.3,
-            recency_days=hscrp['days_old'] if hscrp else 180,
+            recency_days=hscrp.get('days_old', 180) if hscrp else 180,
             signal_quality=0.75
         )
         
@@ -213,7 +213,7 @@ class InflammatoryImmuneInference:
             what_increases_confidence=confidence_result['what_increases_confidence'],
             safe_action_suggestion="If modifier >15%, inflammation is worsening insulin resistance. Address inflammation sources.",
             input_chain=f"{'hsCRP' if hscrp else 'No hsCRP'} + glucose variability",
-            input_references={'hscrp_upload_id': hscrp['upload_id'] if hscrp else None},
+            input_references={'hscrp_upload_id': hscrp.get('upload_id') if hscrp else None},
             methodologies_used=[
                 "Mediation regression (inflammation → glucose dysregulation)",
                 "Gradient boosting (hsCRP * glucose features)",
@@ -233,7 +233,7 @@ class InflammatoryImmuneInference:
     @staticmethod
     def compute_recovery_capacity_score(
         db: Session,
-        submission_id: int,
+        submission_id: str,
         user_id: int
     ) -> OutputLineItem:
         """Recovery Capacity Score (stress resilience)"""
@@ -247,17 +247,17 @@ class InflammatoryImmuneInference:
         capacity = 50.0  # Baseline
         
         # High HRV = good recovery
-        if hrv and hrv.get('mean', 0) > 70:
+        if hrv and (hrv.get('mean') or 0) > 70:
             capacity += 25
-        elif hrv and hrv.get('mean', 0) < 40:
+        elif hrv and (hrv.get('mean') or 0) < 40:
             capacity -= 20
         
         # Low resting HR = good fitness/recovery
-        if hr_vitals and hr_vitals.get('mean', 0) < 65:
+        if hr_vitals and (hr_vitals.get('mean') or 0) < 65:
             capacity += 15
         
         # Sleep quality
-        if soap and soap.get('sleep_duration', 0) >= 7:
+        if soap and (soap.get('sleep_duration') or 0) >= 7:
             capacity += 10
         
         capacity = min(100, max(0, capacity))
@@ -303,7 +303,7 @@ class InflammatoryImmuneInference:
     @staticmethod
     def compute_cardio_inflammatory_coupling_index(
         db: Session,
-        submission_id: int,
+        submission_id: str,
         user_id: int
     ) -> OutputLineItem:
         """Cardio-Inflammatory Coupling Index"""
@@ -318,16 +318,16 @@ class InflammatoryImmuneInference:
         coupling = 20.0  # Baseline
         
         # High BP + low HRV + inflammation = high coupling
-        if bp_sys and bp_sys.get('mean', 0) > 130:
+        if bp_sys and (bp_sys.get('mean') or 0) > 130:
             coupling += 15
         
-        if hrv and hrv.get('mean', 100) < 50:
+        if hrv and (hrv.get('mean') or 100) < 50:
             coupling += 15
         
-        if hscrp and hscrp['value'] and hscrp['value'] > 2.0:
+        if hscrp and hscrp.get('value') is not None and hscrp['value'] > 2.0:
             coupling += 20
         
-        if glucose_data and glucose_data['mean'] > 110:
+        if glucose_data and glucose_data.get('mean') is not None and glucose_data['mean'] > 110:
             coupling += 10
         
         coupling = min(100, coupling)
@@ -353,7 +353,7 @@ class InflammatoryImmuneInference:
             what_increases_confidence=confidence_result['what_increases_confidence'],
             safe_action_suggestion="If coupling >60, inflammation is amplifying cardiovascular risk. Address both pathways simultaneously.",
             input_chain="BP + HRV + hsCRP + metabolic risk (glucose)",
-            input_references={'hscrp_upload_id': hscrp['upload_id'] if hscrp else None},
+            input_references={'hscrp_upload_id': hscrp.get('upload_id') if hscrp else None},
             methodologies_used=[
                 "Composite index (BP + HRV + inflammation + metabolic)",
                 "Risk regression (interaction terms)",

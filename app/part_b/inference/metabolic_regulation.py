@@ -27,7 +27,7 @@ class MetabolicRegulationInference:
     @staticmethod
     def estimate_hba1c_range(
         db: Session,
-        submission_id: int,
+        submission_id: str,
         user_id: int
     ) -> OutputLineItem:
         """
@@ -57,14 +57,14 @@ class MetabolicRegulationInference:
         
         # Check quality gate
         has_anchor = prior_a1c is not None
-        anchor_days = prior_a1c['days_old'] if prior_a1c else None
+        anchor_days = prior_a1c.get('days_old') if prior_a1c else None
         
         gating_result = gating_engine.check_a1c_estimate_gate(
-            days_of_glucose_data=glucose_data['days_of_data'] if glucose_data else 0,
-            signal_quality=glucose_data['avg_quality_score'] if glucose_data else 0,
-            has_recent_a1c_lab=has_anchor and anchor_days < 90,
+            days_of_glucose_data=glucose_data.get('days_of_data', 0) if glucose_data else 0,
+            signal_quality=glucose_data.get('avg_quality_score', 0) if glucose_data else 0,
+            has_recent_a1c_lab=has_anchor and anchor_days is not None and anchor_days < 90,
             a1c_lab_days_old=anchor_days,
-            glucose_cv=glucose_data['cv'] if glucose_data else 1.0
+            glucose_cv=glucose_data.get('cv', 1.0) if glucose_data else 1.0
         )
         
         if not gating_result['allowed']:
@@ -89,11 +89,11 @@ class MetabolicRegulationInference:
         
         # Method 1: GMI-style regression (mean glucose → HbA1c estimate)
         # GMI formula: HbA1c ≈ (mean_glucose_mg/dL + 46.7) / 28.7
-        mean_glucose = glucose_data['mean']
+        mean_glucose = glucose_data.get('mean', 100) if glucose_data else 100
         estimated_a1c = (mean_glucose + 46.7) / 28.7
         
         # Method 2: Bayesian calibration to prior HbA1c
-        if prior_a1c and prior_a1c['value']:
+        if prior_a1c and prior_a1c.get('value') is not None:
             # Weight: newer labs = more weight
             prior_weight = max(0.3, 1.0 - (anchor_days / 180)) if anchor_days else 0.3
             estimated_a1c = prior_weight * prior_a1c['value'] + (1 - prior_weight) * estimated_a1c
@@ -119,17 +119,17 @@ class MetabolicRegulationInference:
         # Compute confidence
         confidence_result = confidence_engine.compute_confidence(
             output_type=OutputType.INFERRED_TIGHT if gating_result['recommended_range_width'] == RangeWidth.TIGHT else OutputType.INFERRED_WIDE,
-            completeness_score=0.9 if glucose_data['days_of_data'] >= 30 else 0.7,
+            completeness_score=0.9 if glucose_data and glucose_data.get('days_of_data') is not None and glucose_data['days_of_data'] >= 30 else 0.7,
             anchor_quality=1.0 if (has_anchor and anchor_days < 90) else 0.5,
             recency_days=anchor_days if anchor_days else 180,
             signal_quality=glucose_data.get('avg_quality_score'),
-            signal_stability=1.0 - min(glucose_data['cv'], 1.0),
+            signal_stability=1.0 - min(glucose_data.get('cv', 0), 1.0) if glucose_data else 0.5,
             metadata={'has_prior_a1c': has_anchor}
         )
         
         # Build input chain string
         input_chain_parts = [
-            f"ISF glucose ({glucose_data['days_of_data']}d, mean {mean_glucose:.1f} mg/dL)"
+            f"ISF glucose ({glucose_data.get('days_of_data', 0)}d, mean {mean_glucose:.1f} mg/dL)" if glucose_data else "No glucose data"
         ]
         if prior_a1c:
             input_chain_parts.append(f"prior HbA1c lab ({anchor_days}d old, {prior_a1c['value']:.1f}%)")
@@ -178,7 +178,7 @@ class MetabolicRegulationInference:
     @staticmethod
     def compute_insulin_resistance_score(
         db: Session,
-        submission_id: int,
+        submission_id: str,
         user_id: int
     ) -> OutputLineItem:
         """
@@ -209,7 +209,7 @@ class MetabolicRegulationInference:
         # Check gate
         has_anchor = (fasting_glucose_lab is not None) or (fasting_insulin_lab is not None)
         
-        if not glucose_data or glucose_data['days_of_data'] < 14:
+        if not glucose_data or glucose_data.get('days_of_data', 0) < 14:
             return OutputLineItem(
                 output_id=f"metabolic_ir_{int(datetime.utcnow().timestamp())}",
                 metric_name="insulin_resistance_probability",
@@ -233,11 +233,11 @@ class MetabolicRegulationInference:
         ir_score = 0.5  # Baseline
         
         # Glucose variability (high CV suggests IR)
-        if glucose_data['cv'] > 0.36:
+        if glucose_data and glucose_data.get('cv') is not None and glucose_data['cv'] > 0.36:
             ir_score += 0.15
         
         # Elevated lactate (metabolic stress)
-        if lactate_data and lactate_data['mean'] > 2.0:  # mmol/L
+        if lactate_data and lactate_data.get('mean') is not None and lactate_data['mean'] > 2.0:  # mmol/L
             ir_score += 0.10
         
         # BMI/waist (obesity linked to IR)
@@ -246,19 +246,19 @@ class MetabolicRegulationInference:
             waist = soap.get('waist_cm')
             sex = soap.get('sex')
             
-            if bmi and bmi > 30:
+            if bmi is not None and bmi > 30:
                 ir_score += 0.15
-            elif bmi and bmi > 25:
+            elif bmi is not None and bmi > 25:
                 ir_score += 0.08
             
             # Waist: >102cm men, >88cm women
-            if waist and sex:
+            if waist is not None and sex:
                 threshold = 102 if sex == 'male' else 88
                 if waist > threshold:
                     ir_score += 0.10
         
         # Method 3: Bayesian updating with labs
-        if fasting_glucose_lab and fasting_glucose_lab['value']:
+        if fasting_glucose_lab and fasting_glucose_lab.get('value') is not None:
             # Fasting glucose >100 suggests IR/prediabetes
             if fasting_glucose_lab['value'] > 100:
                 ir_score += 0.12
@@ -278,23 +278,23 @@ class MetabolicRegulationInference:
             output_type=OutputType.INFERRED_TIGHT if has_anchor else OutputType.INFERRED_WIDE,
             completeness_score=0.8,
             anchor_quality=0.9 if has_anchor else 0.4,
-            recency_days=fasting_glucose_lab['days_old'] if fasting_glucose_lab else 180,
+            recency_days=fasting_glucose_lab.get('days_old', 180) if fasting_glucose_lab else 180,
             signal_quality=glucose_data.get('avg_quality_score'),
-            signal_stability=1.0 - min(glucose_data['cv'], 1.0)
+            signal_stability=1.0 - min(glucose_data.get('cv', 0), 1.0) if glucose_data else 0.5
         )
         
         # Input chain
         input_parts = [
-            f"ISF glucose variability (CV {glucose_data['cv']:.2f})"
+            f"ISF glucose variability (CV {glucose_data.get('cv', 0):.2f})" if glucose_data else "No glucose data"
         ]
-        if lactate_data:
+        if lactate_data and lactate_data.get('mean') is not None:
             input_parts.append(f"ISF lactate (mean {lactate_data['mean']:.1f} mmol/L)")
         if soap:
             if soap.get('bmi'):
                 input_parts.append(f"BMI {soap['bmi']:.1f}")
             if soap.get('waist_cm'):
                 input_parts.append(f"waist {soap['waist_cm']}cm")
-        if fasting_glucose_lab:
+        if fasting_glucose_lab and fasting_glucose_lab.get('days_old') is not None:
             input_parts.append(f"fasting glucose lab ({fasting_glucose_lab['days_old']}d old)")
         
         return OutputLineItem(
@@ -314,7 +314,7 @@ class MetabolicRegulationInference:
                 'isf_glucose_stream': True,
                 'isf_lactate_stream': lactate_data is not None,
                 'soap_profile_id': submission.id,
-                'fasting_glucose_upload_id': fasting_glucose_lab['upload_id'] if fasting_glucose_lab else None
+                'fasting_glucose_upload_id': fasting_glucose_lab.get('upload_id') if fasting_glucose_lab else None
             },
             methodologies_used=[
                 "Feature-engineered scoring (glucose CV, lactate, BMI, waist)",
@@ -335,7 +335,7 @@ class MetabolicRegulationInference:
     @staticmethod
     def compute_metabolic_flexibility_score(
         db: Session,
-        submission_id: int,
+        submission_id: str,
         user_id: int
     ) -> OutputLineItem:
         """
@@ -364,7 +364,7 @@ class MetabolicRegulationInference:
         soap = PartADataHelper.get_soap_profile(db, submission.id)
         
         # Check minimum data
-        if not lactate_data or not glucose_data or lactate_data['days_of_data'] < 14:
+        if not lactate_data or not glucose_data or lactate_data.get('days_of_data', 0) < 14:
             return OutputLineItem(
                 output_id=f"metabolic_flex_{int(datetime.utcnow().timestamp())}",
                 metric_name="metabolic_flexibility_score",
@@ -406,9 +406,8 @@ class MetabolicRegulationInference:
             flexibility_score += 10
         
         # Sleep quality bonus
-        if soap and soap.get('sleep_duration'):
-            if soap['sleep_duration'] >= 7:
-                flexibility_score += 5
+        if soap and soap.get('sleep_duration') is not None and soap['sleep_duration'] >= 7:
+            flexibility_score += 5
         
         # Method 3: Population baseline (normalize to 0-100)
         flexibility_score = min(100, max(0, flexibility_score))
@@ -459,7 +458,7 @@ class MetabolicRegulationInference:
     @staticmethod
     def compute_postprandial_dysregulation_phenotype(
         db: Session,
-        submission_id: int,
+        submission_id: str,
         user_id: int
     ) -> OutputLineItem:
         """
@@ -477,7 +476,7 @@ class MetabolicRegulationInference:
         glucose_data = PartADataHelper.get_isf_analyte_data(db, submission.id, 'glucose', days_back=30)
         soap = PartADataHelper.get_soap_profile(db, submission.id)
         
-        if not glucose_data or glucose_data['days_of_data'] < 14:
+        if not glucose_data or glucose_data.get('days_of_data', 0) < 14:
             return OutputLineItem(
                 output_id=f"metabolic_ppd_{int(datetime.utcnow().timestamp())}",
                 metric_name="postprandial_dysregulation_phenotype",
@@ -500,11 +499,11 @@ class MetabolicRegulationInference:
         phenotype = "normal_clearance"  # Default
         
         # Check for high post-meal spikes (early peak phenotype)
-        if glucose_data['max'] > 160 and glucose_data['cv'] > 0.25:
+        if glucose_data and glucose_data.get('max') is not None and glucose_data.get('cv') is not None and glucose_data['max'] > 160 and glucose_data['cv'] > 0.25:
             phenotype = "early_peak"
         
         # Check for nocturnal elevation using mean as proxy
-        if glucose_data['mean'] > 110:
+        if glucose_data and glucose_data.get('mean') is not None and glucose_data['mean'] > 110:
             phenotype = "delayed_clearance"
         
         # Late meal context from SOAP
@@ -552,7 +551,7 @@ class MetabolicRegulationInference:
     @staticmethod
     def compute_prediabetes_trajectory(
         db: Session,
-        submission_id: int,
+        submission_id: str,
         user_id: int
     ) -> OutputLineItem:
         """
@@ -572,7 +571,7 @@ class MetabolicRegulationInference:
         prior_a1c = PartADataHelper.get_most_recent_lab(db, submission.id, 'hemoglobin_a1c', 'blood')
         prior_glucose = PartADataHelper.get_most_recent_lab(db, submission.id, 'glucose', 'blood')
         
-        if not glucose_data or glucose_data['days_of_data'] < 28:
+        if not glucose_data or glucose_data.get('days_of_data', 0) < 28:
             return OutputLineItem(
                 output_id=f"metabolic_trajectory_{int(datetime.utcnow().timestamp())}",
                 metric_name="prediabetes_trajectory_class",
@@ -595,20 +594,20 @@ class MetabolicRegulationInference:
         trajectory = "stable"
         
         # Check if glucose trending up
-        if glucose_data['mean'] > 105:
+        if glucose_data and glucose_data.get('mean') is not None and glucose_data['mean'] > 105:
             trajectory = "worsening"
-        elif glucose_data['mean'] < 95 and glucose_data['cv'] < 0.30:
+        elif glucose_data and glucose_data.get('mean') is not None and glucose_data.get('cv') is not None and glucose_data['mean'] < 95 and glucose_data['cv'] < 0.30:
             trajectory = "improving"
         
         # Anchor to labs if available
-        if prior_a1c and prior_a1c['value']:
+        if prior_a1c and prior_a1c.get('value') is not None:
             if prior_a1c['value'] >= 6.0:
                 trajectory = "worsening"
             elif prior_a1c['value'] < 5.5:
                 trajectory = "improving"
         
         # BMI trend from SOAP
-        if soap and soap.get('bmi'):
+        if soap and soap.get('bmi') is not None:
             if soap['bmi'] > 30:
                 trajectory = "worsening" if trajectory != "improving" else "stable"
         
@@ -618,7 +617,7 @@ class MetabolicRegulationInference:
             output_type=OutputType.INFERRED_TIGHT if has_anchor else OutputType.INFERRED_WIDE,
             completeness_score=0.75,
             anchor_quality=0.9 if has_anchor else 0.3,
-            recency_days=prior_a1c['days_old'] if prior_a1c else 180,
+            recency_days=prior_a1c.get('days_old', 180) if prior_a1c else 180,
             signal_quality=glucose_data.get('avg_quality_score')
         )
         

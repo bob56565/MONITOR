@@ -24,7 +24,7 @@ class LipidCardiometabolicInference:
     @staticmethod
     def compute_atherogenic_risk_phenotype(
         db: Session,
-        submission_id: int,
+        submission_id: str,
         user_id: int
     ) -> OutputLineItem:
         """
@@ -75,7 +75,7 @@ class LipidCardiometabolicInference:
         phenotype = "low_risk"  # Default
         
         # TC/HDL ratio (>5 = high risk)
-        if total_chol and hdl and hdl['value']:
+        if total_chol and hdl and hdl.get('value') is not None and total_chol.get('value') is not None:
             tc_hdl_ratio = total_chol['value'] / hdl['value']
             if tc_hdl_ratio > 5:
                 phenotype = "high_risk"
@@ -83,26 +83,26 @@ class LipidCardiometabolicInference:
                 phenotype = "moderate_risk"
         
         # TG/HDL ratio (>3 = high risk)
-        if trig and hdl and hdl['value']:
+        if trig and hdl and hdl.get('value') is not None and trig.get('value') is not None:
             tg_hdl_ratio = trig['value'] / hdl['value']
             if tg_hdl_ratio > 3:
                 phenotype = "high_risk"
         
         # LDL direct (>160 = high risk)
-        if ldl and ldl['value']:
+        if ldl and ldl.get('value') is not None:
             if ldl['value'] > 160:
                 phenotype = "high_risk"
             elif ldl['value'] > 130:
                 phenotype = "moderate_risk" if phenotype == "low_risk" else phenotype
         
         # Method 2: Add IR/glucose context
-        if glucose_data and glucose_data['mean'] > 110:
+        if glucose_data and glucose_data.get('mean') is not None and glucose_data['mean'] > 110:
             if phenotype == "low_risk":
                 phenotype = "moderate_risk"
         
         # Method 3: BMI/BP context
         if soap:
-            if soap.get('bmi', 0) > 30 or (vitals and vitals.get('mean', 0) > 140):
+            if (soap.get('bmi') or 0) > 30 or (vitals and (vitals.get('mean') or 0) > 140):
                 if phenotype == "low_risk":
                     phenotype = "moderate_risk"
         
@@ -166,7 +166,7 @@ class LipidCardiometabolicInference:
     @staticmethod
     def compute_triglyceride_elevation_probability(
         db: Session,
-        submission_id: int,
+        submission_id: str,
         user_id: int
     ) -> OutputLineItem:
         """Triglyceride Elevation Probability (≥150 mg/dL)"""
@@ -180,7 +180,7 @@ class LipidCardiometabolicInference:
         prob = 30.0  # Population baseline
         
         # Anchor to lab if available
-        if trig_lab and trig_lab['value']:
+        if trig_lab and trig_lab.get('value') is not None:
             if trig_lab['value'] >= 150:
                 prob = 85.0
             elif trig_lab['value'] >= 100:
@@ -189,11 +189,11 @@ class LipidCardiometabolicInference:
                 prob = 20.0
         
         # Adjust based on glucose (high glucose → higher TG risk)
-        if glucose_data and glucose_data['mean'] > 110:
+        if glucose_data and glucose_data.get('mean') is not None and glucose_data['mean'] > 110:
             prob = min(100, prob + 15)
         
         # BMI adjustment
-        if soap and soap.get('bmi', 0) > 30:
+        if soap and (soap.get('bmi') or 0) > 30:
             prob = min(100, prob + 10)
         
         has_anchor = trig_lab is not None
@@ -202,7 +202,7 @@ class LipidCardiometabolicInference:
             output_type=OutputType.INFERRED_TIGHT if has_anchor else OutputType.INFERRED_WIDE,
             completeness_score=0.75,
             anchor_quality=0.9 if has_anchor else 0.4,
-            recency_days=trig_lab['days_old'] if trig_lab else 180,
+            recency_days=trig_lab.get('days_old', 180) if trig_lab else 180,
             signal_quality=0.8
         )
         
@@ -219,7 +219,7 @@ class LipidCardiometabolicInference:
             what_increases_confidence=confidence_result['what_increases_confidence'],
             safe_action_suggestion="If probability >70%, consider lipid panel and dietary modification (reduce refined carbs, alcohol).",
             input_chain=f"{'Prior TG lab' if trig_lab else 'No TG lab'} + glucose context + BMI",
-            input_references={'trig_upload_id': trig_lab['upload_id'] if trig_lab else None},
+            input_references={'trig_upload_id': trig_lab.get('upload_id') if trig_lab else None},
             methodologies_used=[
                 "Regression-to-risk mapping (lab → probability)",
                 "Gradient boosting with glucose + BMI",
@@ -239,7 +239,7 @@ class LipidCardiometabolicInference:
     @staticmethod
     def compute_ldl_pattern_risk_proxy(
         db: Session,
-        submission_id: int,
+        submission_id: str,
         user_id: int
     ) -> OutputLineItem:
         """LDL Pattern Risk Proxy (small dense LDL likelihood)"""
@@ -252,13 +252,13 @@ class LipidCardiometabolicInference:
         # Small dense LDL proxy: high TG + high glucose + IR
         risk_score = 30.0  # Baseline
         
-        if trig_lab and trig_lab['value'] and trig_lab['value'] > 150:
+        if trig_lab and trig_lab.get('value') is not None and trig_lab['value'] > 150:
             risk_score += 25
         
-        if glucose_data and glucose_data['cv'] > 0.36:
+        if glucose_data and glucose_data.get('cv') is not None and glucose_data['cv'] > 0.36:
             risk_score += 20  # IR proxy
         
-        if ldl_lab and ldl_lab['value'] and ldl_lab['value'] > 130:
+        if ldl_lab and ldl_lab.get('value') is not None and ldl_lab['value'] > 130:
             risk_score += 15
         
         risk_score = min(100, risk_score)
@@ -286,7 +286,7 @@ class LipidCardiometabolicInference:
             what_increases_confidence=confidence_result['what_increases_confidence'] + ["Add apoB or LDL particle number test"],
             safe_action_suggestion="If score >70, consider advanced lipid panel (apoB, LDL-P) and consult clinician.",
             input_chain=f"{'LDL+TG labs' if has_anchor else 'No lipid labs'} + IR proxy (glucose CV)",
-            input_references={'ldl_upload_id': ldl_lab['upload_id'] if ldl_lab else None},
+            input_references={'ldl_upload_id': ldl_lab.get('upload_id') if ldl_lab else None},
             methodologies_used=[
                 "Heuristic constraints (IR + inflammation → sdLDL)",
                 "Logistic regression on TG/glucose/LDL",
@@ -306,7 +306,7 @@ class LipidCardiometabolicInference:
     @staticmethod
     def compute_hdl_functional_likelihood(
         db: Session,
-        submission_id: int,
+        submission_id: str,
         user_id: int
     ) -> OutputLineItem:
         """HDL Functional Likelihood (cholesterol efflux capacity proxy)"""
@@ -318,7 +318,7 @@ class LipidCardiometabolicInference:
         # HDL function proxy
         function_score = 50.0  # Baseline
         
-        if hdl_lab and hdl_lab['value']:
+        if hdl_lab and hdl_lab.get('value') is not None:
             if hdl_lab['value'] >= 60:
                 function_score = 75.0
             elif hdl_lab['value'] < 40:
@@ -334,7 +334,7 @@ class LipidCardiometabolicInference:
             output_type=OutputType.INFERRED_WIDE,
             completeness_score=0.60,
             anchor_quality=0.7 if has_anchor else 0.3,
-            recency_days=hdl_lab['days_old'] if hdl_lab else 180,
+            recency_days=hdl_lab.get('days_old', 180) if hdl_lab else 180,
             signal_quality=0.7
         )
         
@@ -351,7 +351,7 @@ class LipidCardiometabolicInference:
             what_increases_confidence=confidence_result['what_increases_confidence'] + ["Add HDL-P or cholesterol efflux capacity test"],
             safe_action_suggestion="If score <50, focus on exercise and omega-3 intake to improve HDL function.",
             input_chain=f"{'HDL lab' if hdl_lab else 'No HDL lab'} + activity level",
-            input_references={'hdl_upload_id': hdl_lab['upload_id'] if hdl_lab else None},
+            input_references={'hdl_upload_id': hdl_lab.get('upload_id') if hdl_lab else None},
             methodologies_used=[
                 "Composite scoring (HDL level + activity)",
                 "Mixed-effects regression (population baseline)",
@@ -371,7 +371,7 @@ class LipidCardiometabolicInference:
     @staticmethod
     def compute_cardiometabolic_risk_score(
         db: Session,
-        submission_id: int,
+        submission_id: str,
         user_id: int
     ) -> OutputLineItem:
         """Cardiometabolic Risk Score (composite 10-year risk proxy)"""
@@ -391,38 +391,40 @@ class LipidCardiometabolicInference:
         risk_score = 5.0  # Baseline
         
         # Age
-        if soap and soap.get('age'):
+        if soap and soap.get('age') is not None:
             if soap['age'] > 55:
                 risk_score += 15
             elif soap['age'] > 45:
                 risk_score += 10
         
         # LDL
-        if lipid_panel['ldl'] and lipid_panel['ldl']['value']:
+        if lipid_panel.get('ldl') and lipid_panel['ldl'].get('value') is not None:
             if lipid_panel['ldl']['value'] > 160:
                 risk_score += 15
             elif lipid_panel['ldl']['value'] > 130:
                 risk_score += 10
         
         # HDL (protective)
-        if lipid_panel['hdl'] and lipid_panel['hdl']['value']:
+        if lipid_panel.get('hdl') and lipid_panel['hdl'].get('value') is not None:
             if lipid_panel['hdl']['value'] < 40:
                 risk_score += 10
             elif lipid_panel['hdl']['value'] > 60:
                 risk_score -= 5
+            elif lipid_panel['hdl']['value'] > 60:
+                risk_score -= 5
         
         # BP
-        if bp and bp.get('mean', 0) > 140:
+        if bp and (bp.get('mean') or 0) > 140:
             risk_score += 15
-        elif bp and bp.get('mean', 0) > 130:
+        elif bp and (bp.get('mean') or 0) > 130:
             risk_score += 8
         
         # Glucose/diabetes risk
-        if glucose_data and glucose_data['mean'] > 110:
+        if glucose_data and glucose_data.get('mean') is not None and glucose_data['mean'] > 110:
             risk_score += 10
         
         # BMI
-        if soap and soap.get('bmi', 0) > 30:
+        if soap and (soap.get('bmi') or 0) > 30:
             risk_score += 10
         
         # Smoking

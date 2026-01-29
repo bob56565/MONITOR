@@ -8,7 +8,7 @@ from app.services.confidence import confidence_engine, OutputType
 
 class ComprehensiveIntegratedInference:
     @staticmethod
-    def compute_homeostatic_resilience_score(db: Session, submission_id: int, user_id: int) -> OutputLineItem:
+    def compute_homeostatic_resilience_score(db: Session, submission_id: str, user_id: int) -> OutputLineItem:
         submission = PartADataHelper.get_submission(db, submission_id, user_id)
         hrv = PartADataHelper.get_vitals_summary(db, submission.id, 'hrv_sdnn', days_back=30)
         hr = PartADataHelper.get_vitals_summary(db, submission.id, 'heart_rate', days_back=30)
@@ -17,11 +17,11 @@ class ComprehensiveIntegratedInference:
         soap = PartADataHelper.get_soap_profile(db, submission.id)
         
         resilience = 50.0
-        if hrv and hrv.get('mean', 0) > 60: resilience += 15
-        if hr and hr.get('mean', 75) < 70: resilience += 10
-        if glucose_data and glucose_data['cv'] < 0.30: resilience += 10
-        if sodium and sodium['cv'] < 0.03: resilience += 10
-        if soap and soap.get('sleep_duration', 0) >= 7: resilience += 5
+        if hrv and (hrv.get('mean') or 0) > 60: resilience += 15
+        if hr and (hr.get('mean') or 75) < 70: resilience += 10
+        if glucose_data and glucose_data.get('cv') is not None and glucose_data['cv'] < 0.30: resilience += 10
+        if sodium and sodium.get('cv') is not None and sodium['cv'] < 0.03: resilience += 10
+        if soap and (soap.get('sleep_duration') or 0) >= 7: resilience += 5
         resilience = min(100, resilience)
         
         confidence_result = confidence_engine.compute_confidence(OutputType.INFERRED_WIDE, 0.75, 0.65, 7, 0.75)
@@ -46,7 +46,7 @@ class ComprehensiveIntegratedInference:
         )
     
     @staticmethod
-    def compute_allostatic_load_proxy(db: Session, submission_id: int, user_id: int) -> OutputLineItem:
+    def compute_allostatic_load_proxy(db: Session, submission_id: str, user_id: int) -> OutputLineItem:
         submission = PartADataHelper.get_submission(db, submission_id, user_id)
         bp_sys = PartADataHelper.get_vitals_summary(db, submission.id, 'blood_pressure_systolic', days_back=30)
         hrv = PartADataHelper.get_vitals_summary(db, submission.id, 'hrv_sdnn', days_back=30)
@@ -55,12 +55,12 @@ class ComprehensiveIntegratedInference:
         soap = PartADataHelper.get_soap_profile(db, submission.id)
         
         load = 20.0
-        if bp_sys and bp_sys.get('mean', 0) > 130: load += 15
-        if hrv and hrv.get('mean', 100) < 40: load += 15
-        if hscrp and hscrp['value'] and hscrp['value'] > 2.0: load += 20
-        if glucose_data and glucose_data['mean'] > 110: load += 10
-        if soap and soap.get('sleep_duration', 8) < 6: load += 10
-        if soap and soap.get('bmi', 0) > 30: load += 10
+        if bp_sys and (bp_sys.get('mean') or 0) > 130: load += 15
+        if hrv and (hrv.get('mean') or 100) < 40: load += 15
+        if hscrp and hscrp.get('value') is not None and hscrp['value'] > 2.0: load += 20
+        if glucose_data and glucose_data.get('mean') is not None and glucose_data['mean'] > 110: load += 10
+        if soap and (soap.get('sleep_duration') or 8) < 6: load += 10
+        if soap and (soap.get('bmi') or 0) > 30: load += 10
         load = min(100, load)
         
         confidence_result = confidence_engine.compute_confidence(OutputType.INFERRED_WIDE, 0.75, 0.70, 30, 0.75)
@@ -77,7 +77,7 @@ class ComprehensiveIntegratedInference:
             what_increases_confidence=confidence_result['what_increases_confidence'],
             safe_action_suggestion="If load >60, chronic stress is accumulating. Address sleep, inflammation, BP, and metabolic health.",
             input_chain="BP + HRV + inflammation + metabolic + sleep + BMI",
-            input_references={'hscrp_upload_id': hscrp['upload_id'] if hscrp else None},
+            input_references={'hscrp_upload_id': hscrp.get('upload_id') if hscrp else None},
             methodologies_used=["Risk-score regression (BP+HRV+inflammation+metabolic+sleep+BMI)", "Composite weighting", "Bayesian calibration", "Change-point detection"],
             method_why=["Established allostatic load framework", "Integrates multiple stress pathways", "Personalizes to individual profile", "Detects meaningful shifts"],
             gating_payload={},
@@ -85,17 +85,17 @@ class ComprehensiveIntegratedInference:
         )
     
     @staticmethod
-    def compute_metabolic_inflammatory_coupling_index(db: Session, submission_id: int, user_id: int) -> OutputLineItem:
+    def compute_metabolic_inflammatory_coupling_index(db: Session, submission_id: str, user_id: int) -> OutputLineItem:
         submission = PartADataHelper.get_submission(db, submission_id, user_id)
         hscrp = PartADataHelper.get_most_recent_lab(db, submission.id, 'hscrp', 'blood')
         glucose_data = PartADataHelper.get_isf_analyte_data(db, submission.id, 'glucose', days_back=30)
         
         coupling = 25.0
-        if hscrp and hscrp['value'] and hscrp['value'] > 2.0 and glucose_data and glucose_data['mean'] > 110:
+        if hscrp and hscrp.get('value') is not None and hscrp['value'] > 2.0 and glucose_data and glucose_data.get('mean') is not None and glucose_data['mean'] > 110:
             coupling += 35  # Synergistic effect
-        elif hscrp and hscrp['value'] and hscrp['value'] > 1.0:
+        elif hscrp and hscrp.get('value') is not None and hscrp['value'] > 1.0:
             coupling += 15
-        elif glucose_data and glucose_data['mean'] > 105:
+        elif glucose_data and glucose_data.get('mean') is not None and glucose_data['mean'] > 105:
             coupling += 10
         coupling = min(100, coupling)
         
@@ -113,7 +113,7 @@ class ComprehensiveIntegratedInference:
             what_increases_confidence=confidence_result['what_increases_confidence'],
             safe_action_suggestion="If coupling >60, inflammation and metabolic dysfunction are reinforcing each other. Address both pathways.",
             input_chain=f"{'hsCRP' if hscrp else 'No hsCRP'} + glucose dysregulation",
-            input_references={'hscrp_upload_id': hscrp['upload_id'] if hscrp else None},
+            input_references={'hscrp_upload_id': hscrp.get('upload_id') if hscrp else None},
             methodologies_used=["Correlation + lag analysis", "Regression modeling (interaction terms)", "Bayesian anchor to hsCRP", "Trend smoothing"],
             method_why=["Quantifies bidirectional amplification", "Captures temporal dynamics", "Personalizes to baseline inflammation", "Stabilizes monthly signal"],
             gating_payload={},
@@ -121,18 +121,18 @@ class ComprehensiveIntegratedInference:
         )
     
     @staticmethod
-    def compute_autonomic_status(db: Session, submission_id: int, user_id: int) -> OutputLineItem:
+    def compute_autonomic_status(db: Session, submission_id: str, user_id: int) -> OutputLineItem:
         submission = PartADataHelper.get_submission(db, submission_id, user_id)
         hrv = PartADataHelper.get_vitals_summary(db, submission.id, 'hrv_sdnn', days_back=30)
         hr = PartADataHelper.get_vitals_summary(db, submission.id, 'heart_rate', days_back=30)
         soap = PartADataHelper.get_soap_profile(db, submission.id)
         
         status = 50.0
-        if hrv and hrv.get('mean', 0) > 60: status += 20
-        elif hrv and hrv.get('mean', 100) < 40: status -= 20
-        if hr and hr.get('mean', 75) < 65: status += 15
-        elif hr and hr.get('mean', 75) > 85: status -= 15
-        if soap and soap.get('sleep_duration', 0) >= 7: status += 10
+        if hrv and (hrv.get('mean') or 0) > 60: status += 20
+        elif hrv and (hrv.get('mean') or 100) < 40: status -= 20
+        if hr and (hr.get('mean') or 75) < 65: status += 15
+        elif hr and (hr.get('mean') or 75) > 85: status -= 15
+        if soap and (soap.get('sleep_duration') or 0) >= 7: status += 10
         if soap and soap.get('caffeine_intake') in ['high', 'very_high']: status -= 10
         status = max(0, min(100, status))
         
@@ -158,7 +158,7 @@ class ComprehensiveIntegratedInference:
         )
     
     @staticmethod
-    def compute_physiological_age_proxy(db: Session, submission_id: int, user_id: int) -> OutputLineItem:
+    def compute_physiological_age_proxy(db: Session, submission_id: str, user_id: int) -> OutputLineItem:
         submission = PartADataHelper.get_submission(db, submission_id, user_id)
         hrv = PartADataHelper.get_vitals_summary(db, submission.id, 'hrv_sdnn', days_back=30)
         hr = PartADataHelper.get_vitals_summary(db, submission.id, 'heart_rate', days_back=30)
@@ -170,16 +170,16 @@ class ComprehensiveIntegratedInference:
         age_modifier = 0
         
         # Positive aging markers
-        if hrv and hrv.get('mean', 100) < 40: age_modifier += 8
-        if hr and hr.get('mean', 70) > 80: age_modifier += 5
-        if bp_sys and bp_sys.get('mean', 0) > 140: age_modifier += 10
-        if glucose_data and glucose_data['mean'] > 110: age_modifier += 7
-        if soap and soap.get('bmi', 0) > 30: age_modifier += 5
-        if soap and soap.get('sleep_duration', 8) < 6: age_modifier += 5
+        if hrv and (hrv.get('mean') or 100) < 40: age_modifier += 8
+        if hr and (hr.get('mean') or 70) > 80: age_modifier += 5
+        if bp_sys and (bp_sys.get('mean') or 0) > 140: age_modifier += 10
+        if glucose_data and glucose_data.get('mean') is not None and glucose_data['mean'] > 110: age_modifier += 7
+        if soap and (soap.get('bmi') or 0) > 30: age_modifier += 5
+        if soap and (soap.get('sleep_duration') or 8) < 6: age_modifier += 5
         
         # Negative aging (better than chronological)
-        if hrv and hrv.get('mean', 0) > 70: age_modifier -= 8
-        if hr and hr.get('mean', 75) < 65: age_modifier -= 5
+        if hrv and (hrv.get('mean') or 0) > 70: age_modifier -= 8
+        if hr and (hr.get('mean') or 75) < 65: age_modifier -= 5
         if soap and soap.get('activity_level') in ['high', 'very_high']: age_modifier -= 5
         
         physiological_age = chronological_age + age_modifier

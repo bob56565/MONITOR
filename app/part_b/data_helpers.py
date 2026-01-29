@@ -52,7 +52,8 @@ class PartADataHelper:
         
         if days_back:
             cutoff = datetime.utcnow() - timedelta(days=days_back)
-            query = query.filter(ISFAnalyteStream.start_time >= cutoff)
+            # Use created_at instead of start_time (which doesn't exist in the model)
+            query = query.filter(ISFAnalyteStream.created_at >= cutoff)
         
         return query.all()
     

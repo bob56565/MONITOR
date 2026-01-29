@@ -8,16 +8,16 @@ from app.services.confidence import confidence_engine, OutputType
 
 class EndocrineNeurohormonalInference:
     @staticmethod
-    def compute_cortisol_rhythm_integrity_score(db: Session, submission_id: int, user_id: int) -> OutputLineItem:
+    def compute_cortisol_rhythm_integrity_score(db: Session, submission_id: str, user_id: int) -> OutputLineItem:
         submission = PartADataHelper.get_submission(db, submission_id, user_id)
         cortisol_lab = PartADataHelper.get_most_recent_lab(db, submission.id, 'cortisol', 'saliva')
         hrv = PartADataHelper.get_vitals_summary(db, submission.id, 'hrv_sdnn', days_back=30)
         soap = PartADataHelper.get_soap_profile(db, submission.id)
         
         score = 60.0
-        if hrv and hrv.get('mean', 0) < 40: score -= 20
-        if soap and soap.get('sleep_duration', 8) < 6: score -= 15
-        if cortisol_lab and cortisol_lab['value'] > 20: score -= 10  # Elevated evening cortisol
+        if hrv and (hrv.get('mean') or 0) < 40: score -= 20
+        if soap and (soap.get('sleep_duration') or 8) < 6: score -= 15
+        if cortisol_lab and cortisol_lab.get('value') is not None and cortisol_lab['value'] > 20: score -= 10  # Elevated evening cortisol
         score = max(0, min(100, score))
         
         confidence_result = confidence_engine.compute_confidence(OutputType.INFERRED_WIDE, 0.65, 0.5, 30, 0.7)
@@ -34,7 +34,7 @@ class EndocrineNeurohormonalInference:
             what_increases_confidence=confidence_result['what_increases_confidence'] + ["Add 4-point salivary cortisol test"],
             safe_action_suggestion="If score <50, address sleep, stress management, and circadian rhythm optimization.",
             input_chain=f"HRV + sleep + {'saliva cortisol' if cortisol_lab else 'no cortisol lab'}",
-            input_references={'cortisol_upload_id': cortisol_lab['upload_id'] if cortisol_lab else None},
+            input_references={'cortisol_upload_id': cortisol_lab.get('upload_id') if cortisol_lab else None},
             methodologies_used=["Circadian pattern modeling (phase/amplitude)", "Bayesian updating with saliva cortisol", "Composite index (HRV+sleep+stress)", "Quality gating"],
             method_why=["Captures diurnal rhythm disruption", "Personalizes to measured cortisol", "Integrates autonomic markers", "Excludes poor quality samples"],
             gating_payload={},
@@ -42,16 +42,16 @@ class EndocrineNeurohormonalInference:
         )
     
     @staticmethod
-    def compute_stress_adaptation_vs_maladaptation_classifier(db: Session, submission_id: int, user_id: int) -> OutputLineItem:
+    def compute_stress_adaptation_vs_maladaptation_classifier(db: Session, submission_id: str, user_id: int) -> OutputLineItem:
         submission = PartADataHelper.get_submission(db, submission_id, user_id)
         hrv = PartADataHelper.get_vitals_summary(db, submission.id, 'hrv_sdnn', days_back=30)
         hr = PartADataHelper.get_vitals_summary(db, submission.id, 'heart_rate', days_back=30)
         soap = PartADataHelper.get_soap_profile(db, submission.id)
         
         classification = "adaptive"
-        if hrv and hrv.get('mean', 100) < 40 and hr and hr.get('mean', 70) > 80:
+        if hrv and (hrv.get('mean') or 100) < 40 and hr and (hr.get('mean') or 70) > 80:
             classification = "maladaptive"
-        if soap and soap.get('sleep_duration', 8) < 6:
+        if soap and (soap.get('sleep_duration') or 8) < 6:
             classification = "maladaptive" if classification != "adaptive" else "at_risk"
         
         confidence_result = confidence_engine.compute_confidence(OutputType.INFERRED_WIDE, 0.70, 0.6, 7, 0.75)
@@ -75,21 +75,21 @@ class EndocrineNeurohormonalInference:
         )
     
     @staticmethod
-    def compute_thyroid_functional_pattern(db: Session, submission_id: int, user_id: int) -> OutputLineItem:
+    def compute_thyroid_functional_pattern(db: Session, submission_id: str, user_id: int) -> OutputLineItem:
         submission = PartADataHelper.get_submission(db, submission_id, user_id)
         tsh = PartADataHelper.get_most_recent_lab(db, submission.id, 'tsh', 'blood')
         t4 = PartADataHelper.get_most_recent_lab(db, submission.id, 't4_free', 'blood')
         hr = PartADataHelper.get_vitals_summary(db, submission.id, 'heart_rate', days_back=30)
         
         pattern = "euthyroid"
-        if tsh and tsh['value']:
+        if tsh and tsh.get('value') is not None:
             if tsh['value'] > 4.5: pattern = "hypothyroid_pattern"
             elif tsh['value'] < 0.4: pattern = "hyperthyroid_pattern"
-        if hr and hr.get('mean', 70) < 55: pattern = "hypothyroid_pattern"
-        elif hr and hr.get('mean', 70) > 90: pattern = "hyperthyroid_pattern"
+        if hr and (hr.get('mean') or 70) < 55: pattern = "hypothyroid_pattern"
+        elif hr and (hr.get('mean') or 70) > 90: pattern = "hyperthyroid_pattern"
         
         has_anchor = tsh is not None or t4 is not None
-        confidence_result = confidence_engine.compute_confidence(OutputType.INFERRED_TIGHT if has_anchor else OutputType.INFERRED_WIDE, 0.75, 0.9 if has_anchor else 0.4, tsh['days_old'] if tsh else 180, 0.8)
+        confidence_result = confidence_engine.compute_confidence(OutputType.INFERRED_TIGHT if has_anchor else OutputType.INFERRED_WIDE, 0.75, 0.9 if has_anchor else 0.4, tsh.get('days_old', 180) if tsh else 180, 0.8)
         return OutputLineItem(
             output_id=f"endo_thyroid_{int(datetime.utcnow().timestamp())}",
             metric_name="thyroid_functional_pattern",
@@ -102,7 +102,7 @@ class EndocrineNeurohormonalInference:
             what_increases_confidence=confidence_result['what_increases_confidence'],
             safe_action_suggestion=f"Pattern is '{pattern}'. If abnormal, consult clinician for thyroid panel (TSH, T4, T3).",
             input_chain=f"{'TSH lab' if tsh else 'No TSH'} + HR context",
-            input_references={'tsh_upload_id': tsh['upload_id'] if tsh else None},
+            input_references={'tsh_upload_id': tsh.get('upload_id') if tsh else None},
             methodologies_used=["Rule-based patterning (hypo/hyper physiology)", "Bayesian anchor to TSH/T4", "Classifier (functional patterns)", "Quality gating"],
             method_why=["Standard clinical thyroid assessment", "Personalizes to lab values", "Interpretable categories", "Prevents misclassification from lab errors"],
             gating_payload={},
@@ -110,15 +110,15 @@ class EndocrineNeurohormonalInference:
         )
     
     @staticmethod
-    def compute_sympathetic_dominance_index(db: Session, submission_id: int, user_id: int) -> OutputLineItem:
+    def compute_sympathetic_dominance_index(db: Session, submission_id: str, user_id: int) -> OutputLineItem:
         submission = PartADataHelper.get_submission(db, submission_id, user_id)
         hrv = PartADataHelper.get_vitals_summary(db, submission.id, 'hrv_sdnn', days_back=30)
         hr = PartADataHelper.get_vitals_summary(db, submission.id, 'heart_rate', days_back=30)
         soap = PartADataHelper.get_soap_profile(db, submission.id)
         
         dominance = 40.0
-        if hrv and hrv.get('mean', 100) < 40: dominance += 25
-        if hr and hr.get('mean', 70) > 80: dominance += 20
+        if hrv and (hrv.get('mean') or 100) < 40: dominance += 25
+        if hr and (hr.get('mean') or 70) > 80: dominance += 20
         if soap and soap.get('caffeine_intake') in ['high', 'very_high']: dominance += 10
         dominance = min(100, dominance)
         
@@ -144,18 +144,18 @@ class EndocrineNeurohormonalInference:
         )
     
     @staticmethod
-    def compute_burnout_risk_trajectory(db: Session, submission_id: int, user_id: int) -> OutputLineItem:
+    def compute_burnout_risk_trajectory(db: Session, submission_id: str, user_id: int) -> OutputLineItem:
         submission = PartADataHelper.get_submission(db, submission_id, user_id)
         hrv = PartADataHelper.get_vitals_summary(db, submission.id, 'hrv_sdnn', days_back=60)
         hr = PartADataHelper.get_vitals_summary(db, submission.id, 'heart_rate', days_back=60)
         soap = PartADataHelper.get_soap_profile(db, submission.id)
         
         trajectory = "low_risk"
-        if hrv and hrv.get('mean', 100) < 35 and hr and hr.get('mean', 70) > 85:
+        if hrv and (hrv.get('mean') or 100) < 35 and hr and (hr.get('mean') or 70) > 85:
             trajectory = "high_risk"
-        elif hrv and hrv.get('mean', 100) < 50:
+        elif hrv and (hrv.get('mean') or 100) < 50:
             trajectory = "moderate_risk"
-        if soap and soap.get('sleep_duration', 8) < 6 and soap.get('work_stress') in ['high', 'very_high']:
+        if soap and (soap.get('sleep_duration') or 8) < 6 and soap.get('work_stress') in ['high', 'very_high']:
             trajectory = "high_risk" if trajectory == "moderate_risk" else trajectory
         
         confidence_result = confidence_engine.compute_confidence(OutputType.INFERRED_WIDE, 0.70, 0.65, 30, 0.70)
