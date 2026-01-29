@@ -348,12 +348,19 @@ class PartBOrchestrator:
         db: Session, submission_id: str, user_id: int, request: PartBGenerationRequest
     ) -> PanelSection:
         """Generate renal & hydration panel outputs."""
-        # TODO: Renal panel temporarily disabled pending refactoring
+        outputs = [
+            RenalHydrationInference.compute_hydration_status(db, submission_id, user_id),
+            RenalHydrationInference.compute_electrolyte_regulation_efficiency_score(db, submission_id, user_id),
+            RenalHydrationInference.compute_renal_stress_index(db, submission_id, user_id),
+            RenalHydrationInference.compute_dehydration_driven_creatinine_elevation_risk(db, submission_id, user_id),
+            RenalHydrationInference.compute_egfr_trajectory_class(db, submission_id, user_id)
+        ]
+        
         return PanelSection(
             panel_name="renal_hydration",
             panel_display_name="Renal & Hydration Balance",
-            outputs=[],
-            summary_notes="Renal panel temporarily disabled pending refactoring"
+            outputs=outputs,
+            summary_notes="Kidney function and hydration status assessment"
         )
     
     @staticmethod
