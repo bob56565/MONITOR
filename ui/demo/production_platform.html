@@ -1,0 +1,1962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MONITOR Platform - Production UI</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .auth-section {
+            padding: 40px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        .main-content {
+            display: none;
+            padding: 30px;
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 30px;
+            overflow-x: auto;
+        }
+        
+        .tab {
+            padding: 15px 25px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 1em;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+        
+        .tab:hover {
+            color: #667eea;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        
+        .section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        input[type="text"],
+        input[type="number"],
+        input[type="password"],
+        input[type="email"],
+        input[type="datetime-local"],
+        input[type="file"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        }
+        
+        .status-message {
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            font-weight: 500;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 10px;
+        }
+        
+        .file-upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .file-upload-area:hover {
+            background: #e9ecef;
+            border-color: #764ba2;
+        }
+        
+        .file-upload-area.dragover {
+            background: #d1ecf1;
+            border-color: #0c5460;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .specimen-fields {
+            margin-top: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 6px;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .analyte-entry {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .analyte-entry h4 {
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+        
+        .btn-remove {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            padding: 8px 16px;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+        
+        .btn-add {
+            background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+            margin-top: 10px;
+        }
+        
+        .report-panel {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .report-panel h4 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+        
+        .output-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .output-item h5 {
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .output-item .value {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .output-item .confidence {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+        
+        .output-item .drivers {
+            color: #444;
+            font-size: 0.9em;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #dee2e6;
+        }
+        
+        .confidence-bar {
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        
+        .confidence-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #218838);
+            transition: width 0.3s;
+        }
+        
+        .logout-btn {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            background: rgba(255,255,255,0.2);
+            border: 2px solid white;
+        }
+        
+        .specimen-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .specimen-option {
+            flex: 1;
+            min-width: 200px;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        
+        .specimen-option:hover {
+            border-color: #667eea;
+            background: #f8f9fa;
+        }
+        
+        .specimen-option.selected {
+            border-color: #667eea;
+            background: #e7f0ff;
+        }
+        
+        .specimen-option input[type="checkbox"] {
+            display: none;
+        }
+        
+        .specimen-option label {
+            cursor: pointer;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .quality-gates {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .gate-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .gate-card.pass {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+        
+        .gate-card.fail {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+        
+        .gate-card h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .gate-card .status {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 MONITOR Platform</h1>
+            <p>Comprehensive Health Monitoring & Predictive Analytics</p>
+            <p style="font-size: 0.9em; margin-top: 10px; opacity: 0.8;">Powered by NHANES population data (2017-2020) • Part A + A2 + Part B Integration</p>
+        </div>
+
+        <!-- Authentication Section -->
+        <div class="auth-section" id="authSection">
+            <div class="section">
+                <h3>Login / Sign Up</h3>
+                <div class="form-group">
+                    <label for="authEmail">Email</label>
+                    <input type="email" id="authEmail" placeholder="your.email@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="authPassword">Password</label>
+                    <input type="password" id="authPassword" placeholder="Enter password" required>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="login()">Login</button>
+                    <button class="btn-secondary" onclick="signup()">Sign Up</button>
+                </div>
+                <div id="authStatus"></div>
+            </div>
+        </div>
+
+        <!-- Main Platform -->
+        <div class="main-content" id="mainContent">
+            <button class="logout-btn" onclick="logout()">Logout</button>
+            
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('upload')">📤 Upload Data</button>
+                <button class="tab" onclick="switchTab('manual')">✍️ Manual Entry</button>
+                <button class="tab" onclick="switchTab('quality')">🔍 Data Quality (A2)</button>
+                <button class="tab" onclick="switchTab('reports')">📊 Reports (Part B)</button>
+            </div>
+
+            <!-- Tab 1: File Upload -->
+            <div class="tab-content active" id="uploadTab">
+                <div class="section">
+                    <h3>File Upload - Part A Data</h3>
+                    <p style="margin-bottom: 20px; color: #666;">Upload your specimen data files (.json, .csv, .txt). JSON format preferred with PartAInputSchema structure.</p>
+                    
+                    <div class="file-upload-area" id="fileUploadArea" 
+                         ondrop="handleFileDrop(event)" 
+                         ondragover="handleDragOver(event)" 
+                         ondragleave="handleDragLeave(event)"
+                         onclick="document.getElementById('fileInput').click()">
+                        <input type="file" id="fileInput" class="hidden" 
+                               accept=".json,.csv,.txt" 
+                               onchange="handleFileSelect(event)">
+                        <div style="font-size: 3em; margin-bottom: 15px;">📁</div>
+                        <h4>Drop your file here or click to browse</h4>
+                        <p style="color: #666; margin-top: 10px;">Supports: JSON, CSV, TXT</p>
+                    </div>
+                    
+                    <div id="fileStatus"></div>
+                    
+                    <div class="hidden" id="filePreview" style="margin-top: 20px;">
+                        <h4>File Preview:</h4>
+                        <textarea id="fileContent" readonly style="font-family: monospace; background: #f8f9fa;"></textarea>
+                        <button onclick="submitFileData()" style="margin-top: 15px;">Submit File Data</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: Manual Entry -->
+            <div class="tab-content" id="manualTab">
+                
+                <!-- Part A1: Specimen Selection -->
+                <div class="section">
+                    <h3>A1: Specimen Data Selection</h3>
+                    <p style="margin-bottom: 20px; color: #666;">Select at least ONE specimen type. Fields will appear below based on your selection.</p>
+                    
+                    <div class="specimen-selector">
+                        <div class="specimen-option" onclick="toggleSpecimen('blood')">
+                            <input type="checkbox" id="specimenBlood">
+                            <label for="specimenBlood">🩸 Blood</label>
+                            <p style="font-size: 0.85em; color: #666; margin-top: 5px;">CMP, CBC, Lipids, etc.</p>
+                        </div>
+                        <div class="specimen-option" onclick="toggleSpecimen('saliva')">
+                            <input type="checkbox" id="specimenSaliva">
+                            <label for="specimenSaliva">💧 Saliva</label>
+                            <p style="font-size: 0.85em; color: #666; margin-top: 5px;">Cortisol, DHEA-S, pH</p>
+                        </div>
+                        <div class="specimen-option" onclick="toggleSpecimen('sweat')">
+                            <input type="checkbox" id="specimenSweat">
+                            <label for="specimenSweat">💦 Sweat</label>
+                            <p style="font-size: 0.85em; color: #666; margin-top: 5px;">Na, Cl, K, Lactate</p>
+                        </div>
+                        <div class="specimen-option" onclick="toggleSpecimen('urine')">
+                            <input type="checkbox" id="specimenUrine">
+                            <label for="specimenUrine">🧪 Urine</label>
+                            <p style="font-size: 0.85em; color: #666; margin-top: 5px;">Specific gravity, pH, protein</p>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Specimen Fields -->
+                    <div id="bloodFields" class="specimen-fields hidden">
+                        <h4>Blood Specimen Data</h4>
+                        <div class="form-group">
+                            <label>Collection Date/Time</label>
+                            <input type="datetime-local" id="bloodDateTime">
+                        </div>
+                        <div class="form-group">
+                            <label>Fasting Status</label>
+                            <select id="bloodFasting">
+                                <option value="fasting">Fasting</option>
+                                <option value="non_fasting">Non-Fasting</option>
+                                <option value="unknown">Unknown</option>
+                            </select>
+                        </div>
+                        <div id="bloodAnalytes"></div>
+                        <button class="btn-add" onclick="addBloodAnalyte()">+ Add Analyte</button>
+                    </div>
+
+                    <div id="salivaFields" class="specimen-fields hidden">
+                        <h4>Saliva Specimen Data</h4>
+                        <div class="form-group">
+                            <label>Collection Type</label>
+                            <select id="salivaType">
+                                <option value="spot">Spot (Single)</option>
+                                <option value="serial">Serial (Multiple times)</option>
+                            </select>
+                        </div>
+                        <div id="salivaAnalytes"></div>
+                        <button class="btn-add" onclick="addSalivaAnalyte()">+ Add Analyte</button>
+                    </div>
+
+                    <div id="sweatFields" class="specimen-fields hidden">
+                        <h4>Sweat Specimen Data</h4>
+                        <div class="form-group">
+                            <label>Collection Date/Time</label>
+                            <input type="datetime-local" id="sweatDateTime">
+                        </div>
+                        <div class="form-group">
+                            <label>Sweat Rate (mL/min, optional)</label>
+                            <input type="number" id="sweatRate" step="0.01" min="0">
+                        </div>
+                        <div id="sweatAnalytes"></div>
+                        <button class="btn-add" onclick="addSweatAnalyte()">+ Add Analyte</button>
+                    </div>
+
+                    <div id="urineFields" class="specimen-fields hidden">
+                        <h4>Urine Specimen Data</h4>
+                        <div class="form-group">
+                            <label>Collection Date/Time</label>
+                            <input type="datetime-local" id="urineDateTime">
+                        </div>
+                        <div id="urineAnalytes"></div>
+                        <button class="btn-add" onclick="addUrineAnalyte()">+ Add Analyte</button>
+                    </div>
+                </div>
+
+                <!-- Part A2: ISF Monitor Data (REQUIRED) -->
+                <div class="section">
+                    <h3>A2: ISF Monitor Data (Required)</h3>
+                    <p style="margin-bottom: 20px; color: #666;">Core analytes: Glucose and Lactate are REQUIRED</p>
+                    
+                    <div class="grid">
+                        <div class="form-group">
+                            <label>Glucose Values (comma-separated, mg/dL)</label>
+                            <input type="text" id="isfGlucose" placeholder="95, 100, 92, 88">
+                        </div>
+                        <div class="form-group">
+                            <label>Lactate Values (comma-separated, mmol/L)</label>
+                            <input type="text" id="isfLactate" placeholder="1.2, 1.5, 1.3">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Timestamps (comma-separated, ISO format or leave blank for auto-generation)</label>
+                        <input type="text" id="isfTimestamps" placeholder="2026-01-29T08:00:00, 2026-01-29T09:00:00">
+                    </div>
+                    
+                    <h4 style="margin-top: 20px;">Signal Quality (Optional)</h4>
+                    <div class="grid">
+                        <div class="form-group">
+                            <label>Calibration Status</label>
+                            <select id="isfCalibration">
+                                <option value="recent">Recent (< 12hrs)</option>
+                                <option value="due">Due Soon</option>
+                                <option value="overdue">Overdue</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Sensor Drift Score (0-1)</label>
+                            <input type="number" id="isfDrift" step="0.01" min="0" max="1" value="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label>Noise Score (0-1)</label>
+                            <input type="number" id="isfNoise" step="0.01" min="0" max="1" value="0.05">
+                        </div>
+                        <div class="form-group">
+                            <label>Dropout Percentage</label>
+                            <input type="number" id="isfDropout" step="0.1" min="0" max="100" value="2.0">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Part A3: Vitals Data -->
+                <div class="section">
+                    <h3>A3: Vitals Data</h3>
+                    
+                    <h4>Cardiovascular Vitals</h4>
+                    <div class="grid">
+                        <div class="form-group">
+                            <label>Resting Heart Rate (bpm, comma-separated)</label>
+                            <input type="text" id="vitalHR" placeholder="65, 68, 62">
+                        </div>
+                        <div class="form-group">
+                            <label>HRV RMSSD (ms, comma-separated)</label>
+                            <input type="text" id="vitalHRV" placeholder="45, 52, 48">
+                        </div>
+                        <div class="form-group">
+                            <label>Blood Pressure Systolic (mmHg)</label>
+                            <input type="text" id="vitalBPSys" placeholder="120, 118, 122">
+                        </div>
+                        <div class="form-group">
+                            <label>Blood Pressure Diastolic (mmHg)</label>
+                            <input type="text" id="vitalBPDia" placeholder="80, 78, 82">
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin-top: 20px;">Respiratory & Temperature</h4>
+                    <div class="grid">
+                        <div class="form-group">
+                            <label>Respiratory Rate (breaths/min)</label>
+                            <input type="text" id="vitalResp" placeholder="14, 15, 13">
+                        </div>
+                        <div class="form-group">
+                            <label>SpO2 (%)</label>
+                            <input type="text" id="vitalSpO2" placeholder="98, 99, 97">
+                        </div>
+                        <div class="form-group">
+                            <label>Skin Temperature (°C)</label>
+                            <input type="text" id="vitalTemp" placeholder="36.5, 36.8, 36.6">
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin-top: 20px;">Sleep & Activity</h4>
+                    <div class="grid">
+                        <div class="form-group">
+                            <label>Total Sleep Time (hours)</label>
+                            <input type="number" id="vitalSleep" step="0.1" min="0" placeholder="7.5">
+                        </div>
+                        <div class="form-group">
+                            <label>Sleep Efficiency (%)</label>
+                            <input type="number" id="vitalSleepEff" step="0.1" min="0" max="100" placeholder="85">
+                        </div>
+                        <div class="form-group">
+                            <label>Daily Steps</label>
+                            <input type="number" id="vitalSteps" min="0" placeholder="8500">
+                        </div>
+                        <div class="form-group">
+                            <label>Active Minutes</label>
+                            <input type="number" id="vitalActive" min="0" placeholder="45">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Part A4: SOAP Profile -->
+                <div class="section">
+                    <h3>A4: SOAP Profile</h3>
+                    
+                    <h4>Demographics & Anthropometrics (REQUIRED)</h4>
+                    <div class="grid">
+                        <div class="form-group">
+                            <label>Age *</label>
+                            <input type="number" id="soapAge" min="0" max="120" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Sex at Birth *</label>
+                            <select id="soapSex" required>
+                                <option value="">Select...</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="other">Other</option>
+                                <option value="prefer_not_to_say">Prefer not to say</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Height (cm) *</label>
+                            <input type="number" id="soapHeight" step="0.1" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Weight (kg) *</label>
+                            <input type="number" id="soapWeight" step="0.1" min="0" required>
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin-top: 20px;">Medical History (Dropdown)</h4>
+                    <div class="form-group">
+                        <label>Current Conditions (Select all that apply)</label>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="condDiabetes" value="diabetes">
+                                <label for="condDiabetes">Diabetes</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="condPrediabetes" value="prediabetes">
+                                <label for="condPrediabetes">Prediabetes</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="condHTN" value="hypertension">
+                                <label for="condHTN">Hypertension</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="condCKD" value="ckd">
+                                <label for="condCKD">CKD</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="condThyroid" value="thyroid_disease">
+                                <label for="condThyroid">Thyroid Disease</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin-top: 20px;">Diet Profile (Dropdown)</h4>
+                    <div class="grid">
+                        <div class="form-group">
+                            <label>Diet Pattern</label>
+                            <select id="dietPattern">
+                                <option value="standard">Standard</option>
+                                <option value="mediterranean">Mediterranean</option>
+                                <option value="low_carb">Low Carb</option>
+                                <option value="keto">Keto</option>
+                                <option value="vegan">Vegan</option>
+                                <option value="vegetarian">Vegetarian</option>
+                                <option value="high_protein">High Protein</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Sodium Intake</label>
+                            <select id="dietSodium">
+                                <option value="normal">Normal</option>
+                                <option value="low">Low</option>
+                                <option value="high">High</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Hydration Intake</label>
+                            <select id="dietHydration">
+                                <option value="normal">Normal</option>
+                                <option value="low">Low</option>
+                                <option value="high">High</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Caffeine Intake</label>
+                            <select id="dietCaffeine">
+                                <option value="moderate">Moderate (1-2 cups)</option>
+                                <option value="none">None</option>
+                                <option value="low">Low (< 1 cup)</option>
+                                <option value="high">High (3+ cups)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Alcohol Intake</label>
+                            <select id="dietAlcohol">
+                                <option value="none">None</option>
+                                <option value="low">Low (< 3/week)</option>
+                                <option value="moderate">Moderate (3-7/week)</option>
+                                <option value="high">High (7+/week)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin-top: 20px;">Activity & Lifestyle (Dropdown)</h4>
+                    <div class="grid">
+                        <div class="form-group">
+                            <label>Activity Level</label>
+                            <select id="activityLevel">
+                                <option value="moderate">Moderate</option>
+                                <option value="sedentary">Sedentary</option>
+                                <option value="light">Light</option>
+                                <option value="high">High</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Sleep Schedule</label>
+                            <select id="sleepSchedule">
+                                <option value="consistent">Consistent</option>
+                                <option value="inconsistent">Inconsistent</option>
+                                <option value="variable">Variable</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Nicotine/Tobacco</label>
+                            <select id="nicotine">
+                                <option value="none">None</option>
+                                <option value="former">Former</option>
+                                <option value="current">Current</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin-top: 20px;">Symptoms (Optional)</h4>
+                    <div class="form-group">
+                        <label>Free-text Symptom Description</label>
+                        <textarea id="symptomsFreeText" placeholder="Describe any symptoms you're experiencing..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div style="text-align: center; margin-top: 30px;">
+                    <button onclick="submitManualData()" style="padding: 15px 50px; font-size: 1.1em;">
+                        📤 Submit Part A Data
+                    </button>
+                </div>
+                <div id="manualStatus"></div>
+            </div>
+
+            <!-- Tab 3: Data Quality (A2) -->
+            <div class="tab-content" id="qualityTab">
+                <div class="section">
+                    <h3>A2: Data Quality & Gating</h3>
+                    <p style="margin-bottom: 20px; color: #666;">Check data completeness and eligibility status for Part B inference</p>
+                    
+                    <div class="form-group">
+                        <label>Submission ID</label>
+                        <input type="text" id="qualitySubmissionId" placeholder="Enter submission ID from Part A">
+                    </div>
+                    
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <button onclick="checkCompleteness()">Check Completeness</button>
+                        <button onclick="checkGatingStatus()">Check Gating Status</button>
+                        <button onclick="checkPriorsExample()">Check Priors (Glucose)</button>
+                    </div>
+                    
+                    <div id="qualityResults" style="margin-top: 30px;"></div>
+                </div>
+            </div>
+
+            <!-- Tab 4: Part B Reports -->
+            <div class="tab-content" id="reportsTab">
+                <div class="section">
+                    <h3>Part B: Generate & View Reports</h3>
+                    <p style="margin-bottom: 20px; color: #666;">Generate comprehensive 35-output analysis across 7 panels</p>
+                    
+                    <div class="form-group">
+                        <label>Submission ID</label>
+                        <input type="text" id="reportSubmissionId" placeholder="Enter submission ID from Part A">
+                    </div>
+                    
+                    <button onclick="generatePartBReport()">🚀 Generate Part B Report</button>
+                    
+                    <div id="reportStatus"></div>
+                    <div id="reportResults"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE = window.location.hostname === 'localhost' ? 
+            'http://localhost:8000' : 
+            `${window.location.protocol}//${window.location.hostname}:8000`;
+        
+        let authToken = localStorage.getItem('authToken');
+        let currentSubmissionId = null;
+
+        // Check authentication on load
+        if (authToken) {
+            document.getElementById('authSection').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+        }
+
+        // ===== AUTHENTICATION =====
+        
+        async function signup() {
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+            
+            if (!email || !password) {
+                showStatus('authStatus', '❌ Please enter email and password', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showStatus('authStatus', '✅ Account created! Logging you in...', 'success');
+                    setTimeout(() => login(), 1000);
+                } else {
+                    showStatus('authStatus', `❌ ${data.detail || 'Signup failed'}`, 'error');
+                }
+            } catch (error) {
+                showStatus('authStatus', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function login() {
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+            
+            if (!email || !password) {
+                showStatus('authStatus', '❌ Please enter email and password', 'error');
+                return;
+            }
+            
+            try {
+                const formData = new URLSearchParams();
+                formData.append('username', email);
+                formData.append('password', password);
+                
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    authToken = data.access_token;
+                    localStorage.setItem('authToken', authToken);
+                    showStatus('authStatus', '✅ Login successful!', 'success');
+                    
+                    setTimeout(() => {
+                        document.getElementById('authSection').style.display = 'none';
+                        document.getElementById('mainContent').style.display = 'block';
+                    }, 500);
+                } else {
+                    showStatus('authStatus', `❌ ${data.detail || 'Login failed'}`, 'error');
+                }
+            } catch (error) {
+                showStatus('authStatus', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        function logout() {
+            authToken = null;
+            localStorage.removeItem('authToken');
+            document.getElementById('authSection').style.display = 'block';
+            document.getElementById('mainContent').style.display = 'none';
+            showStatus('authStatus', 'ℹ️ Logged out', 'info');
+        }
+
+        // ===== UI HELPERS =====
+        
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName + 'Tab').classList.add('active');
+        }
+        
+        function showStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="status-message status-${type}">${message}</div>`;
+        }
+        
+        function toggleSpecimen(type) {
+            const checkbox = document.getElementById(`specimen${type.charAt(0).toUpperCase() + type.slice(1)}`);
+            const fields = document.getElementById(`${type}Fields`);
+            const option = event.currentTarget;
+            
+            checkbox.checked = !checkbox.checked;
+            
+            if (checkbox.checked) {
+                option.classList.add('selected');
+                fields.classList.remove('hidden');
+                
+                // Initialize with one analyte entry
+                if (type === 'blood' && document.getElementById('bloodAnalytes').children.length === 0) {
+                    addBloodAnalyte();
+                } else if (type === 'saliva' && document.getElementById('salivaAnalytes').children.length === 0) {
+                    addSalivaAnalyte();
+                } else if (type === 'sweat' && document.getElementById('sweatAnalytes').children.length === 0) {
+                    addSweatAnalyte();
+                } else if (type === 'urine' && document.getElementById('urineAnalytes').children.length === 0) {
+                    addUrineAnalyte();
+                }
+            } else {
+                option.classList.remove('selected');
+                fields.classList.add('hidden');
+            }
+        }
+
+        // ===== DYNAMIC ANALYTE ENTRY =====
+        
+        let analyteCounter = 0;
+        
+        function addBloodAnalyte() {
+            const container = document.getElementById('bloodAnalytes');
+            const id = ++analyteCounter;
+            const html = `
+                <div class="analyte-entry" id="blood-analyte-${id}">
+                    <h4>Blood Analyte</h4>
+                    <div class="grid">
+                        <div class="form-group">
+                            <label>Analyte Name</label>
+                            <select class="blood-analyte-name">
+                                <option value="glucose">Glucose</option>
+                                <option value="hba1c">HbA1c</option>
+                                <option value="sodium_na">Sodium (Na)</option>
+                                <option value="potassium_k">Potassium (K)</option>
+                                <option value="chloride_cl">Chloride (Cl)</option>
+                                <option value="creatinine">Creatinine</option>
+                                <option value="bun">BUN</option>
+                                <option value="total_cholesterol">Total Cholesterol</option>
+                                <option value="ldl">LDL</option>
+                                <option value="hdl">HDL</option>
+                                <option value="triglycerides">Triglycerides</option>
+                                <option value="tsh">TSH</option>
+                                <option value="free_t4">Free T4</option>
+                                <option value="vitamin_d">Vitamin D</option>
+                                <option value="vitamin_b12">Vitamin B12</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Value</label>
+                            <input type="number" class="blood-analyte-value" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label>Unit</label>
+                            <input type="text" class="blood-analyte-unit" placeholder="mg/dL, mmol/L, etc">
+                        </div>
+                    </div>
+                    <button class="btn-remove" onclick="removeAnalyte('blood-analyte-${id}')">Remove</button>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+        }
+        
+        function addSalivaAnalyte() {
+            const container = document.getElementById('salivaAnalytes');
+            const id = ++analyteCounter;
+            const html = `
+                <div class="analyte-entry" id="saliva-analyte-${id}">
+                    <h4>Saliva Analyte</h4>
+                    <div class="grid">
+                        <div class="form-group">
+                            <label>Analyte Name</label>
+                            <select class="saliva-analyte-name">
+                                <option value="cortisol_morning">Cortisol (Morning)</option>
+                                <option value="cortisol_evening">Cortisol (Evening)</option>
+                                <option value="dhea_s">DHEA-S</option>
+                                <option value="ph">pH</option>
+                                <option value="alpha_amylase">Alpha Amylase</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Value</label>
+                            <input type="number" class="saliva-analyte-value" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label>Unit</label>
+                            <input type="text" class="saliva-analyte-unit" placeholder="ug/dL, pH, etc">
+                        </div>
+                        <div class="form-group">
+                            <label>Timestamp</label>
+                            <input type="datetime-local" class="saliva-analyte-timestamp">
+                        </div>
+                    </div>
+                    <button class="btn-remove" onclick="removeAnalyte('saliva-analyte-${id}')">Remove</button>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+        }
+        
+        function addSweatAnalyte() {
+            const container = document.getElementById('sweatAnalytes');
+            const id = ++analyteCounter;
+            const html = `
+                <div class="analyte-entry" id="sweat-analyte-${id}">
+                    <h4>Sweat Analyte</h4>
+                    <div class="grid">
+                        <div class="form-group">
+                            <label>Analyte Name</label>
+                            <select class="sweat-analyte-name">
+                                <option value="sodium_na">Sodium (Na)</option>
+                                <option value="chloride_cl">Chloride (Cl)</option>
+                                <option value="potassium_k">Potassium (K)</option>
+                                <option value="lactate">Lactate</option>
+                                <option value="glucose">Glucose</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Value</label>
+                            <input type="number" class="sweat-analyte-value" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label>Unit</label>
+                            <input type="text" class="sweat-analyte-unit" placeholder="mmol/L, mg/dL">
+                        </div>
+                    </div>
+                    <button class="btn-remove" onclick="removeAnalyte('sweat-analyte-${id}')">Remove</button>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+        }
+        
+        function addUrineAnalyte() {
+            const container = document.getElementById('urineAnalytes');
+            const id = ++analyteCounter;
+            const html = `
+                <div class="analyte-entry" id="urine-analyte-${id}">
+                    <h4>Urine Analyte</h4>
+                    <div class="grid">
+                        <div class="form-group">
+                            <label>Analyte Name</label>
+                            <select class="urine-analyte-name">
+                                <option value="specific_gravity">Specific Gravity</option>
+                                <option value="ph">pH</option>
+                                <option value="protein">Protein</option>
+                                <option value="glucose">Glucose</option>
+                                <option value="ketones">Ketones</option>
+                                <option value="blood">Blood</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Value</label>
+                            <input type="text" class="urine-analyte-value" placeholder="Value or pos/neg">
+                        </div>
+                        <div class="form-group">
+                            <label>Unit</label>
+                            <input type="text" class="urine-analyte-unit" placeholder="unitless, mg/dL, posneg">
+                        </div>
+                    </div>
+                    <button class="btn-remove" onclick="removeAnalyte('urine-analyte-${id}')">Remove</button>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+        }
+        
+        function removeAnalyte(id) {
+            document.getElementById(id).remove();
+        }
+
+        // ===== FILE UPLOAD =====
+        
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('dragover');
+        }
+        
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('dragover');
+        }
+        
+        function handleFileDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                processFile(files[0]);
+            }
+        }
+        
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            if (files.length > 0) {
+                processFile(files[0]);
+            }
+        }
+        
+        function processFile(file) {
+            showStatus('fileStatus', `ℹ️ Processing file: ${file.name}`, 'info');
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                document.getElementById('fileContent').value = content;
+                document.getElementById('filePreview').classList.remove('hidden');
+                showStatus('fileStatus', `✅ File loaded: ${file.name} (${file.size} bytes)`, 'success');
+            };
+            reader.readAsText(file);
+        }
+        
+        async function submitFileData() {
+            const content = document.getElementById('fileContent').value;
+            
+            if (!content) {
+                showStatus('fileStatus', '❌ No file content to submit', 'error');
+                return;
+            }
+            
+            try {
+                // Try to parse as JSON
+                let partAData;
+                try {
+                    partAData = JSON.parse(content);
+                } catch {
+                    showStatus('fileStatus', '❌ File must contain valid JSON matching PartAInputSchema', 'error');
+                    return;
+                }
+                
+                // Submit to backend
+                showStatus('fileStatus', 'ℹ️ Submitting data to backend...', 'info');
+                
+                const response = await fetch(`${API_BASE}/part-a/submit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(partAData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentSubmissionId = data.submission_id;
+                    document.getElementById('qualitySubmissionId').value = currentSubmissionId;
+                    document.getElementById('reportSubmissionId').value = currentSubmissionId;
+                    
+                    showStatus('fileStatus', 
+                        `✅ Part A data submitted successfully!<br>
+                        <strong>Submission ID:</strong> ${data.submission_id}<br>
+                        <strong>Status:</strong> ${data.status}<br>
+                        <strong>Qualitative encodings applied:</strong> ${data.qualitative_encodings_applied || 0}`, 
+                        'success');
+                } else {
+                    showStatus('fileStatus', `❌ Submission failed: ${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showStatus('fileStatus', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // ===== MANUAL DATA SUBMISSION =====
+        
+        async function submitManualData() {
+            showStatus('manualStatus', 'ℹ️ Collecting form data...', 'info');
+            
+            try {
+                // Build Part A schema
+                const partAData = {
+                    schema_version: "1.0.0",
+                    submission_id: generateUUID(),
+                    submission_timestamp: new Date().toISOString(),
+                    
+                    // A1: Specimen Data
+                    specimen_data: collectSpecimenData(),
+                    
+                    // A2: ISF Monitor Data (REQUIRED)
+                    isf_monitor_data: collectISFData(),
+                    
+                    // A3: Vitals Data
+                    vitals_data: collectVitalsData(),
+                    
+                    // A4: SOAP Profile
+                    soap_profile: collectSOAPProfile(),
+                    
+                    // A5: Qualitative Encoding (backend will apply)
+                    qualitative_encoding: {
+                        rules_applied: [],
+                        total_encoding_entries: 0
+                    }
+                };
+                
+                // Validate minimum requirements
+                if (partAData.specimen_data.modalities_selected.length === 0) {
+                    showStatus('manualStatus', '❌ Please select at least ONE specimen type', 'error');
+                    return;
+                }
+                
+                if (!partAData.isf_monitor_data.core_analytes || partAData.isf_monitor_data.core_analytes.length === 0) {
+                    showStatus('manualStatus', '❌ ISF core analytes (glucose, lactate) are REQUIRED', 'error');
+                    return;
+                }
+                
+                if (!partAData.soap_profile.demographics_anthropometrics.age) {
+                    showStatus('manualStatus', '❌ Please complete required SOAP fields (age, sex, height, weight)', 'error');
+                    return;
+                }
+                
+                // Submit to backend
+                showStatus('manualStatus', 'ℹ️ Submitting to backend...', 'info');
+                
+                const response = await fetch(`${API_BASE}/part-a/submit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(partAData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentSubmissionId = data.submission_id;
+                    document.getElementById('qualitySubmissionId').value = currentSubmissionId;
+                    document.getElementById('reportSubmissionId').value = currentSubmissionId;
+                    
+                    showStatus('manualStatus', 
+                        `✅ Part A data submitted successfully!<br>
+                        <strong>Submission ID:</strong> ${data.submission_id}<br>
+                        <strong>Status:</strong> ${data.status}<br>
+                        <strong>Qualitative encodings applied:</strong> ${data.qualitative_encodings_applied || 0}<br><br>
+                        You can now proceed to Data Quality (A2) or generate Part B reports!`, 
+                        'success');
+                } else {
+                    showStatus('manualStatus', `❌ Submission failed: ${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showStatus('manualStatus', `❌ Error: ${error.message}`, 'error');
+                console.error('Submission error:', error);
+            }
+        }
+        
+        function collectSpecimenData() {
+            const modalities = [];
+            const specimenData = {
+                modalities_selected: [],
+                blood: [],
+                saliva: [],
+                sweat: [],
+                urine: []
+            };
+            
+            // Blood
+            if (document.getElementById('specimenBlood').checked) {
+                modalities.push('blood');
+                const analytes = [];
+                document.querySelectorAll('#bloodAnalytes .analyte-entry').forEach(entry => {
+                    const name = entry.querySelector('.blood-analyte-name').value;
+                    const value = parseFloat(entry.querySelector('.blood-analyte-value').value);
+                    const unit = entry.querySelector('.blood-analyte-unit').value;
+                    if (name && !isNaN(value) && unit) {
+                        analytes.push({ name, value, unit });
+                    }
+                });
+                
+                if (analytes.length > 0) {
+                    specimenData.blood.push({
+                        collection_datetime: document.getElementById('bloodDateTime').value || new Date().toISOString(),
+                        fasting_status: document.getElementById('bloodFasting').value,
+                        panels: [],
+                        analytes: analytes,
+                        source_format: 'manual_entry'
+                    });
+                }
+            }
+            
+            // Saliva
+            if (document.getElementById('specimenSaliva').checked) {
+                modalities.push('saliva');
+                const analytes = [];
+                document.querySelectorAll('#salivaAnalytes .analyte-entry').forEach(entry => {
+                    const name = entry.querySelector('.saliva-analyte-name').value;
+                    const value = parseFloat(entry.querySelector('.saliva-analyte-value').value);
+                    const unit = entry.querySelector('.saliva-analyte-unit').value;
+                    const timestamp = entry.querySelector('.saliva-analyte-timestamp').value;
+                    if (name && !isNaN(value) && unit) {
+                        analytes.push({ 
+                            name, 
+                            value, 
+                            unit,
+                            timestamp: timestamp || new Date().toISOString()
+                        });
+                    }
+                });
+                
+                if (analytes.length > 0) {
+                    specimenData.saliva.push({
+                        collection_type: document.getElementById('salivaType').value,
+                        analytes: analytes,
+                        source_format: 'manual_entry'
+                    });
+                }
+            }
+            
+            // Sweat
+            if (document.getElementById('specimenSweat').checked) {
+                modalities.push('sweat');
+                const analytes = [];
+                document.querySelectorAll('#sweatAnalytes .analyte-entry').forEach(entry => {
+                    const name = entry.querySelector('.sweat-analyte-name').value;
+                    const value = parseFloat(entry.querySelector('.sweat-analyte-value').value);
+                    const unit = entry.querySelector('.sweat-analyte-unit').value;
+                    if (name && !isNaN(value) && unit) {
+                        analytes.push({ name, value, unit });
+                    }
+                });
+                
+                if (analytes.length > 0) {
+                    specimenData.sweat.push({
+                        analytes: analytes,
+                        collection_datetime: document.getElementById('sweatDateTime').value || new Date().toISOString(),
+                        sweat_rate: parseFloat(document.getElementById('sweatRate').value) || null,
+                        source_format: 'manual_entry'
+                    });
+                }
+            }
+            
+            // Urine
+            if (document.getElementById('specimenUrine').checked) {
+                modalities.push('urine');
+                const analytes = [];
+                document.querySelectorAll('#urineAnalytes .analyte-entry').forEach(entry => {
+                    const name = entry.querySelector('.urine-analyte-name').value;
+                    const value = entry.querySelector('.urine-analyte-value').value;
+                    const unit = entry.querySelector('.urine-analyte-unit').value;
+                    if (name && value && unit) {
+                        // Try to parse as number, otherwise keep as string
+                        const numValue = parseFloat(value);
+                        analytes.push({ 
+                            name, 
+                            value: isNaN(numValue) ? value : numValue, 
+                            unit 
+                        });
+                    }
+                });
+                
+                if (analytes.length > 0) {
+                    specimenData.urine.push({
+                        analytes: analytes,
+                        collection_datetime: document.getElementById('urineDateTime').value || new Date().toISOString(),
+                        source_format: 'manual_entry'
+                    });
+                }
+            }
+            
+            specimenData.modalities_selected = modalities;
+            return specimenData;
+        }
+        
+        function collectISFData() {
+            const glucoseStr = document.getElementById('isfGlucose').value;
+            const lactateStr = document.getElementById('isfLactate').value;
+            const timestampsStr = document.getElementById('isfTimestamps').value;
+            
+            const glucoseValues = glucoseStr ? glucoseStr.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v)) : [];
+            const lactateValues = lactateStr ? lactateStr.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v)) : [];
+            
+            // Generate timestamps if not provided
+            let timestamps = [];
+            if (timestampsStr) {
+                timestamps = timestampsStr.split(',').map(t => t.trim());
+            } else {
+                const now = new Date();
+                for (let i = 0; i < Math.max(glucoseValues.length, lactateValues.length); i++) {
+                    const ts = new Date(now.getTime() - i * 3600000); // 1 hour intervals
+                    timestamps.push(ts.toISOString());
+                }
+            }
+            
+            const coreAnalytes = [];
+            
+            if (glucoseValues.length > 0) {
+                coreAnalytes.push({
+                    name: 'glucose',
+                    values: glucoseValues,
+                    unit: 'mg/dL',
+                    timestamps: timestamps.slice(0, glucoseValues.length)
+                });
+            }
+            
+            if (lactateValues.length > 0) {
+                coreAnalytes.push({
+                    name: 'lactate',
+                    values: lactateValues,
+                    unit: 'mmol/L',
+                    timestamps: timestamps.slice(0, lactateValues.length)
+                });
+            }
+            
+            return {
+                core_analytes: coreAnalytes,
+                electrolytes: [],
+                renal_metabolic: [],
+                inflammation_oxidative: [],
+                signal_quality: {
+                    calibration_status: document.getElementById('isfCalibration').value,
+                    sensor_drift_score: parseFloat(document.getElementById('isfDrift').value) || 0.1,
+                    noise_score: parseFloat(document.getElementById('isfNoise').value) || 0.05,
+                    dropout_percentage: parseFloat(document.getElementById('isfDropout').value) || 2.0
+                }
+            };
+        }
+        
+        function collectVitalsData() {
+            const parseArray = (str) => str ? str.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v)) : [];
+            
+            return {
+                cardiovascular: {
+                    heart_rate_resting: parseArray(document.getElementById('vitalHR').value),
+                    hrv_rmssd: parseArray(document.getElementById('vitalHRV').value),
+                    blood_pressure_systolic: parseArray(document.getElementById('vitalBPSys').value),
+                    blood_pressure_diastolic: parseArray(document.getElementById('vitalBPDia').value)
+                },
+                respiratory_temperature: {
+                    respiratory_rate_rest: parseArray(document.getElementById('vitalResp').value),
+                    spo2: parseArray(document.getElementById('vitalSpO2').value),
+                    skin_temperature: parseArray(document.getElementById('vitalTemp').value)
+                },
+                sleep_recovery_activity: {
+                    total_sleep_time_hours: parseFloat(document.getElementById('vitalSleep').value) || null,
+                    sleep_efficiency_percent: parseFloat(document.getElementById('vitalSleepEff').value) || null,
+                    steps_daily: parseInt(document.getElementById('vitalSteps').value) || null,
+                    active_minutes: parseInt(document.getElementById('vitalActive').value) || null
+                }
+            };
+        }
+        
+        function collectSOAPProfile() {
+            // Get selected conditions
+            const conditions = [];
+            if (document.getElementById('condDiabetes').checked) conditions.push('diabetes');
+            if (document.getElementById('condPrediabetes').checked) conditions.push('prediabetes');
+            if (document.getElementById('condHTN').checked) conditions.push('hypertension');
+            if (document.getElementById('condCKD').checked) conditions.push('ckd');
+            if (document.getElementById('condThyroid').checked) conditions.push('thyroid_disease');
+            
+            return {
+                demographics_anthropometrics: {
+                    age: parseInt(document.getElementById('soapAge').value) || 30,
+                    sex_at_birth: document.getElementById('soapSex').value || 'male',
+                    height_cm: parseFloat(document.getElementById('soapHeight').value) || 170,
+                    weight_kg: parseFloat(document.getElementById('soapWeight').value) || 70
+                },
+                medical_history: {
+                    conditions: conditions,
+                    family_history: []
+                },
+                medications_supplements: {
+                    medications: [],
+                    supplements: []
+                },
+                diet: {
+                    pattern: document.getElementById('dietPattern').value,
+                    sodium_intake: document.getElementById('dietSodium').value,
+                    hydration_intake: document.getElementById('dietHydration').value,
+                    caffeine: document.getElementById('dietCaffeine').value,
+                    alcohol: document.getElementById('dietAlcohol').value,
+                    meal_timing: 'consistent'
+                },
+                activity_lifestyle: {
+                    activity_level: document.getElementById('activityLevel').value,
+                    shift_work: false,
+                    sleep_schedule_consistency: document.getElementById('sleepSchedule').value,
+                    nicotine_tobacco: document.getElementById('nicotine').value
+                },
+                symptoms: {
+                    free_text: document.getElementById('symptomsFreeText').value || null,
+                    structured: []
+                }
+            };
+        }
+
+        // ===== DATA QUALITY (A2) =====
+        
+        async function checkCompleteness() {
+            const submissionId = document.getElementById('qualitySubmissionId').value || currentSubmissionId;
+            
+            if (!submissionId) {
+                showStatus('qualityResults', '❌ Please enter a submission ID', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/data-quality/completeness/${submissionId}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    let html = '<div class="section"><h4>✅ Completeness Check Results</h4>';
+                    html += `<div class="quality-gates">`;
+                    
+                    html += `
+                        <div class="gate-card ${data.has_isf_monitor ? 'pass' : 'fail'}">
+                            <h4>ISF Monitor</h4>
+                            <div class="status">${data.has_isf_monitor ? '✅' : '❌'}</div>
+                        </div>
+                        <div class="gate-card ${data.has_specimens ? 'pass' : 'fail'}">
+                            <h4>Specimens</h4>
+                            <div class="status">${data.has_specimens ? '✅' : '❌'}</div>
+                            <p>${data.specimen_count || 0} uploads</p>
+                        </div>
+                        <div class="gate-card ${data.has_vitals ? 'pass' : 'fail'}">
+                            <h4>Vitals</h4>
+                            <div class="status">${data.has_vitals ? '✅' : '❌'}</div>
+                        </div>
+                        <div class="gate-card ${data.has_soap ? 'pass' : 'fail'}">
+                            <h4>SOAP Profile</h4>
+                            <div class="status">${data.has_soap ? '✅' : '❌'}</div>
+                        </div>
+                    `;
+                    
+                    html += '</div>';
+                    html += `<p style="margin-top: 20px;"><strong>Completeness Score:</strong> ${(data.completeness_score * 100).toFixed(1)}%</p>`;
+                    html += '</div>';
+                    
+                    document.getElementById('qualityResults').innerHTML = html;
+                } else {
+                    showStatus('qualityResults', `❌ ${data.detail || 'Check failed'}`, 'error');
+                }
+            } catch (error) {
+                showStatus('qualityResults', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function checkGatingStatus() {
+            const submissionId = document.getElementById('qualitySubmissionId').value || currentSubmissionId;
+            
+            if (!submissionId) {
+                showStatus('qualityResults', '❌ Please enter a submission ID', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/data-quality/gating-status/${submissionId}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    let html = '<div class="section"><h4>🚪 Gating Status</h4>';
+                    html += `<div class="status-message status-${data.eligible_for_inference ? 'success' : 'warning'}">`;
+                    html += `<strong>Eligible for Inference:</strong> ${data.eligible_for_inference ? '✅ YES' : '❌ NO'}`;
+                    html += '</div>';
+                    
+                    if (data.gates_passed) {
+                        html += '<h5 style="margin-top: 20px;">Gates Status:</h5><ul>';
+                        for (const [gate, passed] of Object.entries(data.gates_passed)) {
+                            html += `<li>${gate}: ${passed ? '✅ PASS' : '❌ FAIL'}</li>`;
+                        }
+                        html += '</ul>';
+                    }
+                    
+                    if (data.blocking_issues && data.blocking_issues.length > 0) {
+                        html += '<h5 style="margin-top: 20px; color: #dc3545;">Blocking Issues:</h5><ul>';
+                        data.blocking_issues.forEach(issue => {
+                            html += `<li>${issue}</li>`;
+                        });
+                        html += '</ul>';
+                    }
+                    
+                    html += '</div>';
+                    document.getElementById('qualityResults').innerHTML = html;
+                } else {
+                    showStatus('qualityResults', `❌ ${data.detail || 'Check failed'}`, 'error');
+                }
+            } catch (error) {
+                showStatus('qualityResults', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function checkPriorsExample() {
+            try {
+                const response = await fetch(`${API_BASE}/data-quality/priors/glucose`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    let html = '<div class="section"><h4>📊 Priors Check: Glucose</h4>';
+                    html += '<p style="color: #666; margin-bottom: 15px;">Population reference data from NHANES 2017-2020</p>';
+                    html += `<pre style="background: #f8f9fa; padding: 15px; border-radius: 6px; overflow-x: auto;">${JSON.stringify(data, null, 2)}</pre>`;
+                    html += '</div>';
+                    document.getElementById('qualityResults').innerHTML = html;
+                } else {
+                    showStatus('qualityResults', `❌ ${data.detail || 'Check failed'}`, 'error');
+                }
+            } catch (error) {
+                showStatus('qualityResults', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // ===== PART B REPORTS =====
+        
+        async function generatePartBReport() {
+            const submissionId = document.getElementById('reportSubmissionId').value || currentSubmissionId;
+            
+            if (!submissionId) {
+                showStatus('reportStatus', '❌ Please enter a submission ID', 'error');
+                return;
+            }
+            
+            showStatus('reportStatus', 'ℹ️ Generating Part B report (35 outputs across 7 panels)...', 'info');
+            document.getElementById('reportResults').innerHTML = '<div class="loading"><div class="spinner"></div><p style="margin-top: 15px;">Processing...</p></div>';
+            
+            try {
+                // Generate report
+                const generateResponse = await fetch(`${API_BASE}/part-b/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ submission_id: submissionId })
+                });
+                
+                const generateData = await generateResponse.json();
+                
+                if (!generateResponse.ok) {
+                    showStatus('reportStatus', `❌ Generation failed: ${generateData.detail || 'Unknown error'}`, 'error');
+                    document.getElementById('reportResults').innerHTML = '';
+                    return;
+                }
+                
+                // Fetch report
+                const reportResponse = await fetch(`${API_BASE}/part-b/report/${submissionId}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                const reportData = await reportResponse.json();
+                
+                if (reportResponse.ok) {
+                    showStatus('reportStatus', '✅ Part B report generated successfully!', 'success');
+                    displayPartBReport(reportData);
+                } else {
+                    showStatus('reportStatus', `❌ Failed to fetch report: ${reportData.detail}`, 'error');
+                    document.getElementById('reportResults').innerHTML = '';
+                }
+            } catch (error) {
+                showStatus('reportStatus', `❌ Error: ${error.message}`, 'error');
+                document.getElementById('reportResults').innerHTML = '';
+            }
+        }
+        
+        function displayPartBReport(data) {
+            let html = '<div class="section"><h3>📊 Part B Report: 35 Outputs</h3>';
+            
+            // Panel 1: Physiologic State
+            if (data.panel_1_physiologic_state) {
+                html += '<div class="report-panel">';
+                html += '<h4>Panel 1: Physiologic State (5 outputs)</h4>';
+                const p1 = data.panel_1_physiologic_state;
+                
+                if (p1.primary_regime) {
+                    html += `<div class="output-item">
+                        <h5>Primary Metabolic Regime</h5>
+                        <div class="value">${p1.primary_regime.value || 'N/A'}</div>
+                        <div class="confidence">Confidence: ${((p1.primary_regime.confidence || 0) * 100).toFixed(1)}%</div>
+                        <div class="confidence-bar"><div class="confidence-bar-fill" style="width: ${(p1.primary_regime.confidence || 0) * 100}%"></div></div>
+                    </div>`;
+                }
+                
+                if (p1.stress_loading) {
+                    html += `<div class="output-item">
+                        <h5>Stress Loading</h5>
+                        <div class="value">${p1.stress_loading.value || 'N/A'}</div>
+                        <div class="confidence">Confidence: ${((p1.stress_loading.confidence || 0) * 100).toFixed(1)}%</div>
+                    </div>`;
+                }
+                
+                html += '</div>';
+            }
+            
+            // Panel 2: Immediate Stability
+            if (data.panel_2_immediate_stability) {
+                html += '<div class="report-panel">';
+                html += '<h4>Panel 2: Immediate Stability (5 outputs)</h4>';
+                const p2 = data.panel_2_immediate_stability;
+                
+                if (p2.glucose_stability) {
+                    html += `<div class="output-item">
+                        <h5>Glucose Stability</h5>
+                        <div class="value">${p2.glucose_stability.value || 'N/A'}</div>
+                        <div class="confidence">Confidence: ${((p2.glucose_stability.confidence || 0) * 100).toFixed(1)}%</div>
+                        ${p2.glucose_stability.top_drivers ? `<div class="drivers"><strong>Top Drivers:</strong> ${p2.glucose_stability.top_drivers.join(', ')}</div>` : ''}
+                    </div>`;
+                }
+                
+                html += '</div>';
+            }
+            
+            // Panel 3: Trend Direction
+            if (data.panel_3_trend_direction) {
+                html += '<div class="report-panel">';
+                html += '<h4>Panel 3: Trend Direction (5 outputs)</h4>';
+                const p3 = data.panel_3_trend_direction;
+                
+                for (const [key, output] of Object.entries(p3)) {
+                    if (output && output.value !== undefined) {
+                        html += `<div class="output-item">
+                            <h5>${key.replace(/_/g, ' ').toUpperCase()}</h5>
+                            <div class="value">${output.value}</div>
+                            <div class="confidence">Confidence: ${((output.confidence || 0) * 100).toFixed(1)}%</div>
+                        </div>`;
+                    }
+                }
+                
+                html += '</div>';
+            }
+            
+            // Panel 4: Forecasts (5min - 24hr)
+            if (data.panel_4_forecasts) {
+                html += '<div class="report-panel">';
+                html += '<h4>Panel 4: Forecasts (5 outputs)</h4>';
+                const p4 = data.panel_4_forecasts;
+                
+                for (const [key, output] of Object.entries(p4)) {
+                    if (output && output.point_estimate !== undefined) {
+                        html += `<div class="output-item">
+                            <h5>${key.replace(/_/g, ' ').toUpperCase()}</h5>
+                            <div class="value">Point: ${output.point_estimate.toFixed(1)} | Range: [${output.lower_bound.toFixed(1)}, ${output.upper_bound.toFixed(1)}]</div>
+                            <div class="confidence">Confidence: ${((output.confidence || 0) * 100).toFixed(1)}%</div>
+                        </div>`;
+                    }
+                }
+                
+                html += '</div>';
+            }
+            
+            // Panel 5: Risk Flags
+            if (data.panel_5_risk_flags) {
+                html += '<div class="report-panel">';
+                html += '<h4>Panel 5: Risk Flags (5 outputs)</h4>';
+                const p5 = data.panel_5_risk_flags;
+                
+                for (const [key, output] of Object.entries(p5)) {
+                    if (output && output.flag !== undefined) {
+                        html += `<div class="output-item">
+                            <h5>${key.replace(/_/g, ' ').toUpperCase()}</h5>
+                            <div class="value">${output.flag ? '🚨 FLAGGED' : '✅ Clear'}</div>
+                            <div class="confidence">Confidence: ${((output.confidence || 0) * 100).toFixed(1)}%</div>
+                            ${output.reasoning ? `<div class="drivers"><strong>Reasoning:</strong> ${output.reasoning}</div>` : ''}
+                        </div>`;
+                    }
+                }
+                
+                html += '</div>';
+            }
+            
+            // Panel 6: Actionable Insights
+            if (data.panel_6_actionable_insights) {
+                html += '<div class="report-panel">';
+                html += '<h4>Panel 6: Actionable Insights (5 outputs)</h4>';
+                const p6 = data.panel_6_actionable_insights;
+                
+                for (const [key, output] of Object.entries(p6)) {
+                    if (output && output.insight) {
+                        html += `<div class="output-item">
+                            <h5>${key.replace(/_/g, ' ').toUpperCase()}</h5>
+                            <div class="value">${output.insight}</div>
+                            <div class="confidence">Priority: ${output.priority || 'N/A'}</div>
+                        </div>`;
+                    }
+                }
+                
+                html += '</div>';
+            }
+            
+            // Panel 7: Provenance Summary
+            if (data.panel_7_provenance_summary) {
+                html += '<div class="report-panel">';
+                html += '<h4>Panel 7: Provenance Summary (5 outputs)</h4>';
+                const p7 = data.panel_7_provenance_summary;
+                
+                if (p7.measured_fraction) {
+                    html += `<div class="output-item">
+                        <h5>Measured Fraction</h5>
+                        <div class="value">${((p7.measured_fraction.value || 0) * 100).toFixed(1)}%</div>
+                    </div>`;
+                }
+                
+                if (p7.calibrated_fraction) {
+                    html += `<div class="output-item">
+                        <h5>Calibrated Fraction</h5>
+                        <div class="value">${((p7.calibrated_fraction.value || 0) * 100).toFixed(1)}%</div>
+                    </div>`;
+                }
+                
+                if (p7.inferred_fraction) {
+                    html += `<div class="output-item">
+                        <h5>Inferred Fraction</h5>
+                        <div class="value">${((p7.inferred_fraction.value || 0) * 100).toFixed(1)}%</div>
+                    </div>`;
+                }
+                
+                html += '</div>';
+            }
+            
+            html += '</div>';
+            document.getElementById('reportResults').innerHTML = html;
+        }
+        
+        // ===== UTILITIES =====
+        
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+    </script>
+</body>
+</html>

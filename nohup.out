@@ -1,0 +1,175 @@
+INFO:     Will watch for changes in these directories: ['/workspaces/MONITOR']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [145888] using StatReload
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_disagreement_log" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_name" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_version" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_metadata" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+INFO:     Started server process [145890]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     172.59.188.93:0 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:36832 - "GET /health HTTP/1.1" 200 OK
+INFO:     172.59.188.93:0 - "GET / HTTP/1.1" 404 Not Found
+INFO:     172.59.188.93:0 - "GET / HTTP/1.1" 404 Not Found
+INFO:     172.59.188.93:0 - "GET /auth/profile HTTP/1.1" 200 OK
+INFO:     172.59.188.93:0 - "GET /auth/profile HTTP/1.1" 200 OK
+INFO:     172.59.188.93:0 - "POST /part-a/submit HTTP/1.1" 201 Created
+INFO:     172.59.188.93:0 - "OPTIONS /data-quality/completeness/31eddd60-29cc-4af7-a0c4-522429ffc624 HTTP/1.1" 200 OK
+INFO:     172.59.188.93:0 - "GET /data-quality/completeness/31eddd60-29cc-4af7-a0c4-522429ffc624 HTTP/1.1" 404 Not Found
+INFO:     172.59.188.93:0 - "OPTIONS /data-quality/gating-status/31eddd60-29cc-4af7-a0c4-522429ffc624 HTTP/1.1" 200 OK
+INFO:     172.59.188.93:0 - "GET /data-quality/gating-status/31eddd60-29cc-4af7-a0c4-522429ffc624 HTTP/1.1" 404 Not Found
+INFO:     172.59.188.93:0 - "GET /data-quality/priors/glucose HTTP/1.1" 404 Not Found
+INFO:     172.59.188.93:0 - "POST /part-b/generate HTTP/1.1" 200 OK
+WARNING:  StatReload detected changes in 'app/part_b/inference/renal_hydration.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [145890]
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_disagreement_log" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_name" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_version" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_metadata" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+WARNING:  StatReload detected changes in 'app/part_b/inference/renal_hydration.py'. Reloading...
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_disagreement_log" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_name" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_version" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_metadata" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+INFO:     Started server process [148393]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     172.59.188.93:0 - "GET / HTTP/1.1" 404 Not Found
+WARNING:  StatReload detected changes in 'app/part_b/inference/metabolic_regulation.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [148393]
+WARNING:  StatReload detected changes in 'app/part_b/inference/metabolic_regulation.py'. Reloading...
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_disagreement_log" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_name" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_version" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_metadata" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+INFO:     Started server process [148593]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'app/part_b/inference/inflammatory_immune.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [148593]
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_disagreement_log" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_name" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_version" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_metadata" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+INFO:     Started server process [148788]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'app/part_b/inference/metabolic_regulation.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [148788]
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_disagreement_log" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_name" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_version" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_metadata" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+INFO:     Started server process [148949]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'app/part_b/inference/micronutrient_vitamin.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [148949]
+WARNING:  StatReload detected changes in 'app/part_b/inference/micronutrient_vitamin.py'. Reloading...
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_disagreement_log" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_name" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_version" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+/usr/local/python/3.12.1/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_metadata" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+INFO:     Started server process [149136]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
