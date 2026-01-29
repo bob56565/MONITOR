@@ -19,6 +19,26 @@ from enum import Enum
 from pydantic import BaseModel, Field
 
 
+class EvidenceGrade(str, Enum):
+    """
+    Evidence grade for outputs (Phase 1 Requirement B.5).
+    Each grade has a maximum allowed confidence.
+    """
+    A = "A"  # Anchored / deterministic (max confidence: 0.90)
+    B = "B"  # Multi-signal anchored inference (max confidence: 0.75)
+    C = "C"  # Proxy / indirect inference (max confidence: 0.55)
+    D = "D"  # Exploratory / weak anchor (max confidence: 0.35)
+
+
+# Evidence grade confidence caps (enforced automatically)
+EVIDENCE_GRADE_CAPS = {
+    EvidenceGrade.A: 0.90,
+    EvidenceGrade.B: 0.75,
+    EvidenceGrade.C: 0.55,
+    EvidenceGrade.D: 0.35,
+}
+
+
 class SupportTypeEnum(str, Enum):
     """Type of support for an inferred/measured value."""
     DIRECT = "direct"  # Measured directly from specimen
@@ -101,12 +121,35 @@ class PhysiologicalStateEnum(str, Enum):
 
 
 class InferredValue(BaseModel):
-    """Single inferred or echoed value in the panel."""
+    """
+    Single inferred or echoed value in the panel.
+    Enhanced with Phase 1 standardized output schema (Requirement B.7).
+    """
     key: str  # e.g., "glucose_est", "wbc_est"
+    
+    # Core value (backward compatible)
     value: Optional[float] = None
     range_lower: Optional[float] = None
     range_upper: Optional[float] = None
     range_unit: Optional[str] = None
+    
+    # Phase 1 additions: Standardized output fields
+    estimated_center: Optional[float] = None  # Explicit center estimate (may differ from value)
+    range_low: Optional[float] = None  # Alias for range_lower (standardized name)
+    range_high: Optional[float] = None  # Alias for range_upper (standardized name)
+    confidence_percent: Optional[int] = None  # Confidence as percent (0-100)
+    confidence_interval_type: Optional[str] = "credible_interval"  # Type of CI
+    
+    # Evidence grading (Phase 1 Requirement B.5)
+    evidence_grade: Optional[EvidenceGrade] = None
+    evidence_inputs_used: List[str] = Field(default_factory=list)  # Which inputs/specimens
+    
+    # Physiologic drivers and uncertainty
+    physiologic_drivers: List[str] = Field(default_factory=list)  # What drives the estimate
+    drivers_of_uncertainty: List[str] = Field(default_factory=list)  # What increases uncertainty
+    what_would_tighten_this: List[str] = Field(default_factory=list)  # Recommendations to improve
+    
+    # Backward compatible fields
     confidence_0_1: float = Field(ge=0.0, le=1.0)
     support_type: SupportTypeEnum
     provenance: ProvenanceTypeEnum
@@ -115,6 +158,24 @@ class InferredValue(BaseModel):
     confidence_penalties: List[ConfidencePenaltyEnum] = Field(default_factory=list)
     notes: Optional[str] = None  # e.g., interference warning, stability concern
     engine_sources: List[ModelEnum] = Field(default_factory=list)  # Which engines produced this
+    
+    def model_post_init(self, __context):
+        """Pydantic V2 post-init hook to enforce evidence grade caps and sync aliases."""
+        # Enforce evidence grade confidence caps
+        if self.evidence_grade and self.evidence_grade in EVIDENCE_GRADE_CAPS:
+            max_allowed = EVIDENCE_GRADE_CAPS[self.evidence_grade]
+            if self.confidence_0_1 > max_allowed:
+                self.confidence_0_1 = max_allowed
+        
+        # Sync aliases
+        if self.value is not None and self.estimated_center is None:
+            self.estimated_center = self.value
+        if self.range_lower is not None and self.range_low is None:
+            self.range_low = self.range_lower
+        if self.range_upper is not None and self.range_high is None:
+            self.range_high = self.range_upper
+        if self.confidence_percent is None:
+            self.confidence_percent = int(self.confidence_0_1 * 100)
 
 
 class SuppressedOutput(BaseModel):
@@ -177,10 +238,19 @@ class ProvenanceMapEntry(BaseModel):
 
 
 class InferencePackV2(BaseModel):
-    """Complete inference output for a RunV2."""
+    """
+    Complete inference output for a RunV2.
+    Enhanced with Phase 1 A2 Processing and B Output requirements.
+    """
     run_id: str
     schema_version: str = "v2"
     created_at: datetime
+    
+    # Phase 1 Addition: Coverage truth for all streams (Requirement A.1)
+    coverage_truth: Optional[Any] = None  # CoverageTruthPack from coverage_truth module
+    
+    # Phase 1 Addition: Conflict detection (Requirement A.4)
+    conflict_report: Optional[Any] = None  # ConflictDetectionReport from conflict_detection module
     
     # Core outputs
     measured_values: List[InferredValue] = Field(default_factory=list)  # Direct echoes
