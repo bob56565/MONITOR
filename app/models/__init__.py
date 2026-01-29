@@ -10,11 +10,13 @@ from app.models.part_a_models import (
     SOAPProfileRecord,
     QualitativeEncodingRecord
 )
+from app.models.provenance import InferenceProvenance, ProvenanceHelper
 
 __all__ = [
     "User", "RawSensorData", "CalibratedFeatures", "InferenceResult", 
     "RunV2Record", "FeaturePackV2",
     "PartASubmission", "SpecimenUpload", "SpecimenAnalyte",
     "ISFAnalyteStream", "VitalsRecord", "SOAPProfileRecord",
-    "QualitativeEncodingRecord"
+    "QualitativeEncodingRecord",
+    "InferenceProvenance", "ProvenanceHelper"
 ]
