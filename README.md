@@ -198,6 +198,23 @@ A FastAPI-based backend for sensor data ingestion, preprocessing, and ML inferen
 
    API will be available at `http://localhost:8000`
 
+### Frontend (Vite) Demo UI
+
+1. **Install UI deps**:
+  ```bash
+  cd ui/web
+  npm install
+  ```
+
+2. **Run the dev server (proxied to the API)**:
+  ```bash
+  npm run dev -- --host --port 5173
+  ```
+
+  Open the forwarded URL (or http://localhost:5173). The UI auto-provisions a demo user via `/auth/profile`; if you see auth/404 errors after a container reset, simply reload to refresh the stored token.
+
+- **Schema upload autofill**: On the workflow input page you can upload a JSON schema file (JSON or JSON embedded in .txt/.csv/.doc). The UI will parse `specimens`, `non_lab_inputs`, and `qualitative_inputs` and pre-fill the form automatically before submitting the full pipeline.
+
 4. **Run the Dashboard UI** (in another terminal):
    ```bash
    streamlit run ui/app.py
@@ -246,6 +263,10 @@ A FastAPI-based backend for sensor data ingestion, preprocessing, and ML inferen
 - `POST /auth/login` - Authenticate user
   ```json
   {"email": "user@example.com", "password": "password123"}
+  ```
+- `GET /auth/profile` - Current user (Bearer token)
+  ```json
+  {"user_id": 1, "email": "user@example.com", "name": null}
   ```
 
 ### Data Management

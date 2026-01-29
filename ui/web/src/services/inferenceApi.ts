@@ -11,6 +11,8 @@
  */
 
 const API_BASE = (import.meta as any).env.VITE_API_BASE || '';
+const DEMO_PASSWORD = 'MonitorTestPass123';
+const generateDemoEmail = () => `demo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
 
 const getAuthHeaders = (): HeadersInit => {
   const token = localStorage.getItem('authToken');
@@ -79,6 +81,64 @@ export const authApi = {
       headers: getAuthHeaders(),
     });
     return handleResponse(response);
+  },
+
+  /**
+   * Ensure a valid demo session exists. If the stored token is stale, auto-provision
+   * a fresh demo user and persist the new token.
+   */
+  async ensureDemoAuth(forceReset: boolean = false) {
+    if (forceReset) {
+      this.logout();
+    }
+
+    const existingToken = localStorage.getItem('authToken');
+    const storedEmail = localStorage.getItem('authEmail');
+    const email = storedEmail || generateDemoEmail();
+
+    if (existingToken && !forceReset) {
+      try {
+        await this.getProfile();
+        return existingToken;
+      } catch (_err) {
+        this.logout();
+      }
+    }
+    try {
+      const signupResult = await this.signup(email, DEMO_PASSWORD);
+      if (signupResult?.access_token) {
+        localStorage.setItem('authEmail', email);
+        return signupResult.access_token;
+      }
+    } catch (_signupErr) {
+      // Fall through to login retry below
+    }
+
+    try {
+      const loginResult = await this.login(email, DEMO_PASSWORD);
+      if (loginResult?.access_token) {
+        localStorage.setItem('authEmail', email);
+        return loginResult.access_token;
+      }
+    } catch (loginErr) {
+      // If the stored email is problematic, fall back to a fresh demo identity
+      if (storedEmail) {
+        try {
+          const fallbackEmail = generateDemoEmail();
+          const signupResult = await this.signup(fallbackEmail, DEMO_PASSWORD);
+          if (signupResult?.access_token) {
+            localStorage.setItem('authEmail', fallbackEmail);
+            return signupResult.access_token;
+          }
+        } catch (_fallbackErr) {
+          /* continue to final error */
+        }
+      }
+
+      throw new Error(`Unable to establish demo authentication session: ${String(loginErr)}`);
+    }
+
+    throw new Error('Authentication failed: token missing from response');
   },
 
   /**

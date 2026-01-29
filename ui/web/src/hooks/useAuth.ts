@@ -7,58 +7,20 @@ export function useAuth() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const bootstrapAuth = async () => {
       try {
-        // Check if token already exists
-        const token = localStorage.getItem('authToken');
-        
-        if (token) {
-          // Token exists, we're authenticated
-          setIsAuthenticated(true);
-          setIsLoading(false);
-          return;
-        }
-
-        // No token, auto-create a test user and login
-        const testEmail = `testuser-${Date.now()}@example.com`;
-        const testPassword = 'MonitorTestPass123';
-
-        try {
-          // Try to signup
-          const signupResult = await authApi.signup(testEmail, testPassword);
-          if (signupResult.access_token) {
-            setIsAuthenticated(true);
-            setError(null);
-          } else {
-            setError('Signup failed, but login succeeded');
-            setIsAuthenticated(true);
-          }
-        } catch (signupErr) {
-          // Signup might fail if user exists, try login instead
-          try {
-            const loginResult = await authApi.login(testEmail, testPassword);
-            if (loginResult.access_token) {
-              setIsAuthenticated(true);
-              setError(null);
-            } else {
-              setError('Login failed');
-              setIsAuthenticated(false);
-            }
-          } catch (loginErr) {
-            // If login also fails, we have a real problem
-            setError(`Authentication failed: ${String(loginErr)}`);
-            setIsAuthenticated(false);
-          }
-        }
+        await authApi.ensureDemoAuth();
+        setIsAuthenticated(true);
+        setError(null);
       } catch (err) {
-        setError(`Auth check failed: ${String(err)}`);
+        setError(`Authentication failed: ${String(err)}`);
         setIsAuthenticated(false);
       } finally {
         setIsLoading(false);
       }
     };
 
-    checkAuth();
+    bootstrapAuth();
   }, []);
 
   const logout = () => {

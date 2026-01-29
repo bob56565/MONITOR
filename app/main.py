@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import auth, data, ai, reports, runs
+from app.api import auth, data, ai, reports, runs, part_a
 from app.db.base import Base
 from app.db.session import engine
 import logging
@@ -51,6 +51,7 @@ app.include_router(data.router)
 app.include_router(ai.router)
 app.include_router(reports.router)
 app.include_router(runs.router)
+app.include_router(part_a.router)
 
 if __name__ == "__main__":
     import uvicorn

@@ -127,7 +127,10 @@ def _compute_normalized_values(run_v2: RunV2) -> List[SpecimenNormalizedValues]:
         validity_flags = {}
         
         for var_name, raw_value in specimen.raw_values.items():
-            if specimen.missingness[var_name].is_missing or raw_value is None:
+            # Defensive: check if missingness entry exists
+            is_missing = specimen.missingness.get(var_name, {}).get('is_missing', True) if isinstance(specimen.missingness.get(var_name), dict) else (specimen.missingness[var_name].is_missing if var_name in specimen.missingness else True)
+            
+            if is_missing or raw_value is None:
                 normalized_vals[var_name] = None
                 normalization_refs[var_name] = "missing"
                 validity_flags[var_name] = False

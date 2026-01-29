@@ -123,6 +123,63 @@ class InferenceV2:
                 )
                 eligibility_rationale.append(rationale)
         
+        # STEP 2: Auto-generate outputs for ALL directly measured values not already processed
+        # This ensures EVERY value from uploaded files is captured and displayed
+        produced_keys_used = set([o.key for o in produced_outputs])
+        
+        for specimen in run_v2.specimens:
+            spec_type = specimen.specimen_type.value if hasattr(specimen.specimen_type, 'value') else str(specimen.specimen_type)
+            
+            for var_name, value in specimen.raw_values.items():
+                # Check if not missing
+                is_missing = True
+                if var_name in specimen.missingness:
+                    missingness_entry = specimen.missingness[var_name]
+                    is_missing = missingness_entry.is_missing if hasattr(missingness_entry, 'is_missing') else True
+                
+                # Skip if missing or already produced (not just in catalog)
+                if is_missing or value is None:
+                    continue
+                # Only skip if THIS EXACT KEY was already produced
+                if var_name in produced_keys_used or f"{var_name}_est" in produced_keys_used:
+                    continue
+                
+                # Generate direct measured output
+                try:
+                    numeric_value = float(value)
+                    unit = specimen.units.get(var_name, "")
+                    
+                    inferred = InferredValue(
+                        key=var_name,
+                        value=numeric_value,
+                        range_lower=numeric_value * 0.95,
+                        range_upper=numeric_value * 1.05,
+                        range_unit=unit,
+                        confidence_0_1=0.95,
+                        support_type=SupportTypeEnum.DIRECT,
+                        provenance=ProvenanceTypeEnum.MEASURED,
+                        source_specimen_types=[spec_type],
+                        confidence_drivers=[ConfidenceDriverEnum.DIRECT_MEASUREMENT, ConfidenceDriverEnum.HIGH_SIGNAL_QUALITY],
+                        confidence_penalties=[],
+                        engine_sources=[ModelEnum.CONSENSUS_FUSER],
+                        notes=f"Direct measurement from {spec_type} specimen"
+                    )
+                    produced_outputs.append(inferred)
+                    
+                    # Log rationale
+                    rationale = DependencyRationale(
+                        output_key=var_name,
+                        status="produced",
+                        requires_any=[f"{spec_type.lower()}.{var_name}"],
+                        requires_all=[],
+                        coherence_score=coherence_score,
+                        decision_log=f"Direct measurement available from {spec_type}",
+                    )
+                    eligibility_rationale.append(rationale)
+                except (ValueError, TypeError):
+                    # Skip non-numeric values
+                    continue
+        
         # Compute physiological states (simplified)
         physiological_states = self._compute_physiological_states(produced_outputs, feature_pack_v2)
         
@@ -146,7 +203,7 @@ class InferenceV2:
             eligibility_rationale=eligibility_rationale,
             overall_confidence_0_1=overall_confidence,
             overall_coherence_0_1=coherence_score,
-            domains_assessed=list(set(OUTPUT_CATALOG[k].domain for k in produced_outputs)),
+            domains_assessed=list(set(OUTPUT_CATALOG[output.key].domain for output in produced_outputs if output.key in OUTPUT_CATALOG)),
             specimen_count=len(run_v2.specimens),
             provenance_map=provenance_map,
             processing_notes=f"Processed {len(run_v2.specimens)} specimens; {len(produced_outputs)} outputs produced, {len(suppressed_outputs)} suppressed",
@@ -160,42 +217,48 @@ class InferenceV2:
         run_v2: RunV2,
         feature_pack_v2: Dict[str, Any],
     ) -> Tuple[Dict[str, bool], Dict[str, bool]]:
-        """Extract which values and context are available."""
+        """Extract which values and context are available from actual specimen data."""
         available_values = {}
         available_contexts = {}
         
-        # Check specimen variables
+        # Check specimen variables from raw_values
         for specimen in run_v2.specimens:
-            spec_type = specimen.specimen_type.value.lower()
+            spec_type = specimen.specimen_type.value if hasattr(specimen.specimen_type, 'value') else str(specimen.specimen_type)
+            spec_type_clean = spec_type.lower().replace('_', '.')
             
-            # ISF
-            if hasattr(specimen, 'isf_glucose') and specimen.isf_glucose is not None:
-                available_values[f"isf.glucose"] = True
-            if hasattr(specimen, 'isf_lactate') and specimen.isf_lactate is not None:
-                available_values[f"isf.lactate"] = True
-            
-            # Blood
-            if hasattr(specimen, 'blood_glucose_plasma') and specimen.blood_glucose_plasma is not None:
-                available_values[f"blood.glucose_plasma"] = True
-            if hasattr(specimen, 'blood_wbc') and specimen.blood_wbc is not None:
-                available_values[f"blood.wbc"] = True
-            if hasattr(specimen, 'blood_hemoglobin') and specimen.blood_hemoglobin is not None:
-                available_values[f"blood.hemoglobin"] = True
-            if hasattr(specimen, 'blood_platelets') and specimen.blood_platelets is not None:
-                available_values[f"blood.platelets"] = True
+            # Iterate through all raw values in the specimen
+            for var_name, value in specimen.raw_values.items():
+                # Check if variable is present (not missing)
+                is_missing = True
+                if var_name in specimen.missingness:
+                    missingness_entry = specimen.missingness[var_name]
+                    is_missing = missingness_entry.is_missing if hasattr(missingness_entry, 'is_missing') else True
+                
+                if not is_missing and value is not None:
+                    # Mark as available with multiple key formats for flexible matching
+                    # Format 1: spec_type.var_name (e.g., "isf.glucose")
+                    available_values[f"{spec_type_clean}.{var_name}"] = True
+                    # Format 2: just var_name (e.g., "glucose")
+                    available_values[var_name] = True
+                    # Format 3: spec_type.var_name with underscores (e.g., "isf_glucose")
+                    available_values[f"{spec_type_clean}_{var_name}"] = True
         
-        # Check non_lab_inputs
+        # Check non_lab_inputs (access through nested Pydantic models)
         if run_v2.non_lab_inputs:
-            if run_v2.non_lab_inputs.age:
+            # Demographics
+            if run_v2.non_lab_inputs.demographics and run_v2.non_lab_inputs.demographics.age:
                 available_contexts["age"] = True
-            if run_v2.non_lab_inputs.sex_at_birth:
+            if run_v2.non_lab_inputs.demographics and run_v2.non_lab_inputs.demographics.sex_at_birth:
                 available_contexts["sex_at_birth"] = True
-            if run_v2.non_lab_inputs.weight_kg:
+            # Anthropometrics
+            if run_v2.non_lab_inputs.anthropometrics and run_v2.non_lab_inputs.anthropometrics.weight_kg:
                 available_contexts["weight_kg"] = True
-            if run_v2.non_lab_inputs.activity_level:
-                available_contexts["activity_level"] = True
-            if run_v2.non_lab_inputs.sleep_duration_hr:
-                available_contexts["sleep_duration_known"] = True
+            # Sleep/Activity
+            if run_v2.non_lab_inputs.sleep_activity:
+                if run_v2.non_lab_inputs.sleep_activity.activity_level_0_10:
+                    available_contexts["activity_level"] = True
+                if run_v2.non_lab_inputs.sleep_activity.sleep_duration_hr:
+                    available_contexts["sleep_duration_known"] = True
         
         return available_values, available_contexts
     
@@ -207,12 +270,21 @@ class InferenceV2:
         """Extract blocking conditions."""
         blockers = {}
         
-        # Check for pregnancy (placeholder)
-        if run_v2.non_lab_inputs and hasattr(run_v2.non_lab_inputs, 'pregnancy'):
-            blockers["pregnancy=confirmed_or_suspected"] = bool(run_v2.non_lab_inputs.pregnancy)
+        # Check for pregnancy through qualitative_inputs.hormonal_context
+        if run_v2.qualitative_inputs and run_v2.qualitative_inputs.hormonal_context:
+            hormonal = run_v2.qualitative_inputs.hormonal_context
+            if isinstance(hormonal, dict):
+                context = hormonal.get("context", "")
+                if context and "pregnant" in context.lower():
+                    blockers["pregnancy=confirmed_or_suspected"] = True
         
-        # Check for acute illness (placeholder)
-        blockers["acute_illness"] = False  # Default false
+        # Check for acute illness from symptoms
+        if run_v2.qualitative_inputs and run_v2.qualitative_inputs.symptoms:
+            symptoms = run_v2.qualitative_inputs.symptoms
+            if isinstance(symptoms, dict):
+                desc = symptoms.get("description", "")
+                if desc and any(word in desc.lower() for word in ["fever", "infection", "acute", "sick"]):
+                    blockers["acute_illness"] = True
         
         return blockers
     
@@ -222,31 +294,44 @@ class InferenceV2:
         run_v2: RunV2,
         feature_pack_v2: Dict[str, Any],
     ) -> Optional[Dict[str, Any]]:
-        """Compute a single estimate (simplified stub)."""
-        # This would normally involve calling the 4 engines and fusing
-        # For now, return a simplified stub
+        """Compute a single estimate from actual specimen data."""
         
-        estimates = {
-            "glucose_est": {
-                "value": 95.0,
-                "range_lower": 85.0,
-                "range_upper": 105.0,
-                "unit": "mg/dL",
-                "support_type": SupportTypeEnum.DIRECT,
-                "provenance": ProvenanceTypeEnum.MEASURED,
-                "specimens": ["ISF"],
-            },
-            "wbc_est": {
-                "value": 7.2,
-                "range_lower": 6.5,
-                "range_upper": 7.9,
-                "unit": "K/uL",
-                "support_type": SupportTypeEnum.DIRECT,
-                "provenance": ProvenanceTypeEnum.MEASURED,
-                "specimens": ["BLOOD_HEMATOLOGY"],
-            },
-        }
+        # Extract actual values from specimens
+        estimates = {}
         
+        for specimen in run_v2.specimens:
+            spec_type = specimen.specimen_type.value if hasattr(specimen.specimen_type, 'value') else str(specimen.specimen_type)
+            
+            for var_name, value in specimen.raw_values.items():
+                # Check if not missing
+                if var_name in specimen.missingness:
+                    missingness_entry = specimen.missingness[var_name]
+                    is_missing = missingness_entry.is_missing if hasattr(missingness_entry, 'is_missing') else True
+                    if not is_missing and value is not None:
+                        # Create estimate for this measured value
+                        try:
+                            numeric_value = float(value)
+                            # Get unit from specimen metadata
+                            unit = specimen.units.get(var_name, "")
+                            
+                            # Store with different key patterns that might match output_key
+                            estimate_key = f"{var_name}_est"
+                            estimates[estimate_key] = {
+                                "value": numeric_value,
+                                "range_lower": numeric_value * 0.95,  # Simple ±5% uncertainty
+                                "range_upper": numeric_value * 1.05,
+                                "unit": unit,
+                                "support_type": SupportTypeEnum.DIRECT,
+                                "provenance": ProvenanceTypeEnum.MEASURED,
+                                "specimens": [spec_type],
+                            }
+                            
+                            # Also store without _est suffix
+                            estimates[var_name] = estimates[estimate_key]
+                        except (ValueError, TypeError):
+                            continue
+        
+        # Return the estimate if it matches the output_key
         return estimates.get(output_key)
     
     def _map_reason_to_enum(self, reason: str) -> SuppressionReasonEnum:

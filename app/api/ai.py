@@ -11,7 +11,7 @@ from app.ml.forecast import forecast_next_step
 from app.api.deps import get_current_user
 from app.models.inference_pack_v2 import InferencePackV2
 from app.models.run_v2 import RunV2
-from app.features.preprocess_v2 import preprocess_v2, FeaturePackV2
+from app.features.preprocess_v2 import preprocess_v2 as preprocess_v2_pipeline, FeaturePackV2
 from app.ml.inference_v2 import InferenceV2
 
 router = APIRouter(prefix="/ai", tags=["ai"])
@@ -286,7 +286,7 @@ class PreprocessV2Response(BaseModel):
 
 
 @router.post("/preprocess-v2", response_model=PreprocessV2Response, status_code=201)
-def preprocess_v2(
+def preprocess_v2_endpoint(
     request: PreprocessV2Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -319,7 +319,7 @@ def preprocess_v2(
     
     # Run preprocess_v2
     try:
-        feature_pack_v2 = preprocess_v2(run_v2)
+        feature_pack_v2 = preprocess_v2_pipeline(run_v2)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -394,7 +394,7 @@ class InferenceV2Response(BaseModel):
         }
 
 
-@router.post("/inference/v2", response_model=InferenceV2Response, status_code=201)
+@router.post("/inference/v2")
 def inference_v2(
     request: InferenceV2Request,
     db: Session = Depends(get_db),
@@ -464,7 +464,7 @@ def inference_v2(
     else:
         # Compute feature_pack_v2 on-the-fly
         try:
-            feature_pack_v2 = preprocess_v2(run_v2)
+            feature_pack_v2 = preprocess_v2_pipeline(run_v2)
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -485,11 +485,14 @@ def inference_v2(
     # For now, store as extension to InferenceResult if exists, or create new record
     # This ensures non-breaking: legacy inference_results untouched, v2 stored separately
     
-    return InferenceV2Response(
-        run_id=request.run_id,
-        inference_pack_v2=inference_pack_v2,
-        created_at=datetime.utcnow(),
-    )
+    # Convert to dict to avoid Pydantic serialization issues
+    response_data = {
+        "run_id": request.run_id,
+        "inference_pack_v2": inference_pack_v2.model_dump(mode="json"),
+        "created_at": datetime.utcnow().isoformat(),
+    }
+    
+    return response_data
 
 
 @router.get("/inference/v2/{run_id}", response_model=InferenceV2Response)

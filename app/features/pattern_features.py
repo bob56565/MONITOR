@@ -22,8 +22,13 @@ def compute_temporal_features(run_v2: RunV2) -> List[DerivedTemporalFeatures]:
         # Get primary variable (glucose for ISF/Blood, cortisol for Saliva, etc.)
         primary_var = _get_primary_variable(specimen.specimen_type)
         
-        if primary_var and not specimen.missingness[primary_var].is_missing:
-            value = specimen.raw_values.get(primary_var)
+        # Defensive: check if primary variable exists in missingness dict
+        if primary_var and primary_var in specimen.missingness:
+            missingness_entry = specimen.missingness[primary_var]
+            is_missing = missingness_entry.is_missing if hasattr(missingness_entry, 'is_missing') else True
+            
+            if not is_missing:
+                value = specimen.raw_values.get(primary_var)
             
             # Compute volatility (would normally need time series, using static value as proxy)
             volatility_5m = _estimate_volatility(value, specimen.specimen_type, window="5m")
@@ -71,7 +76,9 @@ def detect_motifs(run_v2: RunV2, temporal_features: List[DerivedTemporalFeatures
     
     # Extract context
     activity_level = _get_nonlab(run_v2, "sleep_activity.activity_level_0_10")
-    diet_pattern = run_v2.qualitative_inputs.diet_recent.get("pattern") if run_v2.qualitative_inputs else None
+    diet_pattern = None
+    if run_v2.qualitative_inputs and run_v2.qualitative_inputs.diet_recent:
+        diet_pattern = run_v2.qualitative_inputs.diet_recent.get("pattern")
     
     # Motif 1: Glucose + Lactate up with exertion marker
     if (isf_glucose is not None and isf_glucose > 120 and
@@ -318,9 +325,14 @@ def _get_value(run_v2: RunV2, specimen_type, var_name: str) -> Optional[float]:
     """Get a value from a specimen of a given type."""
     for specimen in run_v2.specimens:
         if specimen.specimen_type == specimen_type:
-            if not specimen.missingness[var_name].is_missing:
-                val = specimen.raw_values.get(var_name)
-                return float(val) if val is not None else None
+            # Defensive: check if variable exists in missingness dict
+            if var_name in specimen.missingness:
+                missingness_entry = specimen.missingness[var_name]
+                is_missing = missingness_entry.is_missing if hasattr(missingness_entry, 'is_missing') else True
+                if not is_missing:
+                    val = specimen.raw_values.get(var_name)
+                    return float(val) if val is not None else None
+    return None
     return None
 
 

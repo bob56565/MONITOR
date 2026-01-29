@@ -50,14 +50,14 @@ def model_lag_kinetics(run_v2: RunV2) -> LagModelParams:
             lag_coherence = 0.5
     
     # Event anchoring: if diet/activity/sleep markers present
-    qualitative = run_v2.qualitative_inputs or {}
+    qualitative = run_v2.qualitative_inputs
     
     # Postprandial scenario
-    if qualitative.get("diet_recent", {}).get("fasting_state") == "fed":
+    if qualitative and qualitative.diet_recent and qualitative.diet_recent.get("fasting_state") == "fed":
         event_anchored_lags["postprandial"] = lag_estimate + 2.0 if lag_estimate else 8.0
     
     # Activity scenario
-    if qualitative.get("symptoms", {}).get("palpitations"):
+    if qualitative and qualitative.symptoms and qualitative.symptoms.get("palpitations"):
         event_anchored_lags["exertion_like"] = lag_estimate + 1.0 if lag_estimate else 7.0
     
     return LagModelParams(
@@ -261,9 +261,13 @@ def _get_specimen_value(run_v2: RunV2, specimen_type: SpecimenTypeEnum, variable
     """Get a specific variable value from a specimen of given type."""
     for specimen in run_v2.specimens:
         if specimen.specimen_type == specimen_type:
-            if not specimen.missingness[variable_name].is_missing:
-                val = specimen.raw_values.get(variable_name)
-                return float(val) if val is not None else None
+            # Defensive: check if variable exists in missingness dict
+            if variable_name in specimen.missingness:
+                missingness_entry = specimen.missingness[variable_name]
+                is_missing = missingness_entry.is_missing if hasattr(missingness_entry, 'is_missing') else True
+                if not is_missing:
+                    val = specimen.raw_values.get(variable_name)
+                    return float(val) if val is not None else None
     return None
 
 

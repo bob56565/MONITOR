@@ -96,10 +96,16 @@ def compute_missingness_feature_vector(run_v2: RunV2) -> MissingnessFeatureVecto
             has_critical_missing = False
             for specimen in run_v2.specimens:
                 for critical_var in CRITICAL_ANCHORS.get(domain, set()):
+                    # Defensive: check if variable exists in missingness dict
                     if critical_var in specimen.missingness:
-                        if specimen.missingness[critical_var].is_missing:
+                        missingness_entry = specimen.missingness[critical_var]
+                        if hasattr(missingness_entry, 'is_missing') and missingness_entry.is_missing:
                             has_critical_missing = True
                             break
+                    else:
+                        # Variable not in missingness dict = missing
+                        has_critical_missing = True
+                        break
             domain_critical_missing_flags[domain] = has_critical_missing
     
     # Compute aggregate missingness
@@ -155,7 +161,11 @@ def get_domain_presence_summary(run_v2: RunV2) -> Dict[str, bool]:
     for specimen in run_v2.specimens:
         for var_name in specimen.raw_values.keys():
             for domain, vars_in_domain in DOMAINS.items():
-                if var_name in vars_in_domain and not specimen.missingness[var_name].is_missing:
-                    domain_present[domain] = True
+                # Defensive: check if variable exists in missingness dict
+                if var_name in vars_in_domain and var_name in specimen.missingness:
+                    missingness_entry = specimen.missingness[var_name]
+                    is_missing = missingness_entry.is_missing if hasattr(missingness_entry, 'is_missing') else True
+                    if not is_missing:
+                        domain_present[domain] = True
     
     return domain_present
