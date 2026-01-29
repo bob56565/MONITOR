@@ -12,7 +12,7 @@ All outputs follow A2 integration pattern:
 """
 
 from sqlalchemy.orm import Session
-from app.part_b.schemas.output import OutputLineItem
+from app.part_b.schemas.output_schemas import OutputLineItem, OutputFrequency, OutputStatus
 from app.part_b.data_helpers import PartADataHelper
 from app.services.gating import gating_engine
 from app.services.confidence import confidence_engine
