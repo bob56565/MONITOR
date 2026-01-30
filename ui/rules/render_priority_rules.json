@@ -1,0 +1,152 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Render Priority Rules - Deterministic Display Mode Selection",
+  "description": "Strict priority order for selecting render mode based on available representations. Prevents NULL/empty primary values by following deterministic fallback chain.",
+  "version": "1.0.0",
+  "priority_order": [
+    {
+      "priority": 1,
+      "mode": "range",
+      "when": {
+        "fields_required": ["range_low", "range_high"],
+        "or_metric_type": "LAB_PROXY_RANGE"
+      },
+      "headline_template": "Estimated {metric_name}: {range_low}–{range_high} {unit}",
+      "template_category": "LAB_RANGE_PROXY",
+      "success_criteria": "range_low !== null && range_high !== null && range_low !== range_high",
+      "notes": "Highest priority - direct lab analog ranges"
+    },
+    {
+      "priority": 2,
+      "mode": "score",
+      "when": {
+        "fields_required": ["score_value"],
+        "or_metric_type": "INDEX_SCORE"
+      },
+      "headline_template": "{metric_name}: {score_value}/100 ({score_band})",
+      "template_category": "COMPOSITE_INDEX",
+      "success_criteria": "score_value !== null && score_value >= 0 && score_value <= 100",
+      "notes": "Index scores and composite metrics"
+    },
+    {
+      "priority": 3,
+      "mode": "probability",
+      "when": {
+        "fields_required": ["prob_low", "prob_high"],
+        "or_metric_type": "PROBABILITY",
+        "or_single_probability": "probability_value"
+      },
+      "headline_template": "Estimated probability of abnormal {lab_test_name}: {prob_low}–{prob_high}%",
+      "template_category": "PROBABILITY_ABNORMAL",
+      "success_criteria": "prob_low !== null && prob_high !== null OR probability_value !== null",
+      "fallback_single_prob": "If only probability_value exists, compute band: [prob_value - 5, prob_value + 5] capped at [0, 100]",
+      "notes": "Probability estimates - bounded ranges preferred"
+    },
+    {
+      "priority": 4,
+      "mode": "classification",
+      "when": {
+        "fields_required": ["class_label"],
+        "or_metric_type": "CLASSIFICATION"
+      },
+      "headline_template": "Detected pattern: {pattern_label}",
+      "template_category": "PHYSIOLOGIC_PHENOTYPE",
+      "success_criteria": "class_label !== null && class_label !== ''",
+      "notes": "Phenotype classifications - qualitative patterns"
+    },
+    {
+      "priority": 5,
+      "mode": "trend",
+      "when": {
+        "fields_required": ["trend_label"],
+        "or_metric_type": "TREND"
+      },
+      "headline_template": "{metric_name} Trajectory: {trend_label}",
+      "subheadline_template": "Trend: {trend_direction} ({confidence_band})",
+      "template_category": "PHYSIOLOGIC_PHENOTYPE",
+      "success_criteria": "trend_label !== null && trend_label !== ''",
+      "allowed_trend_labels": ["improving", "stable", "worsening", "insufficient_data"],
+      "notes": "Trajectory/trend classifications - temporal patterns"
+    },
+    {
+      "priority": 6,
+      "mode": "insufficient_fallback",
+      "when": {
+        "condition": "none of the above modes satisfied"
+      },
+      "headline_template": "{metric_name}: Exploratory Signal Only",
+      "subheadline_template": "Insufficient data for precise estimate",
+      "template_category": "COMPOSITE_INDEX",
+      "forced_content": {
+        "show_confidence_band": "0-54.9%: Exploratory signal only",
+        "show_what_to_measure_next": true,
+        "show_population_prior_if_available": true,
+        "widen_bounds_to_physiologic_max": true
+      },
+      "success_criteria": "Always succeeds - renders exploratory card with what_to_measure_next",
+      "notes": "Last resort fallback - always renders SOMETHING"
+    }
+  ],
+  "resolution_algorithm": {
+    "steps": [
+      "1. Load metric_type from metric_type_map.json",
+      "2. Inspect normalized payload for available fields",
+      "3. Iterate priority_order from 1 to 6",
+      "4. For each priority level, check: (fields_required satisfied) OR (metric_type matches or_metric_type)",
+      "5. Select first matching mode",
+      "6. If no match by priority 5, force insufficient_fallback (priority 6)",
+      "7. Validate success_criteria for selected mode",
+      "8. If success_criteria fails, log warning and attempt next priority",
+      "9. If all fail, force insufficient_fallback and flag as bug in dev mode"
+    ],
+    "conflict_resolution": "If multiple representations exist (e.g., range AND score), follow priority order - range wins over score"
+  },
+  "mode_specific_rules": {
+    "range": {
+      "min_max_validation": "range_low < range_high required",
+      "unit_required": true,
+      "allow_wide_bounds": "Yes, if degradation tier requires it",
+      "degrade_to_classification_if": "range width exceeds physiologic plausibility (e.g., HbA1c 3-15%)"
+    },
+    "score": {
+      "bounds": "[0, 100]",
+      "band_mapping": {
+        "0-24": "Low",
+        "25-49": "Moderate-Low",
+        "50-74": "Moderate-High",
+        "75-100": "High"
+      },
+      "require_band_label": true
+    },
+    "probability": {
+      "bounds": "[0, 100]",
+      "prefer_range": "prob_low/prob_high over single probability_value",
+      "max_range_width": "<=20 percentage points",
+      "fallback_band_from_single": "probability_value ± 5%, capped at [0, 100]"
+    },
+    "classification": {
+      "require_label": true,
+      "no_numeric_precision": true,
+      "allowed_label_patterns": ["pattern", "class", "phenotype", "status"],
+      "forbidden_labels": ["null", "N/A", "unknown", "error"]
+    },
+    "trend": {
+      "require_label": true,
+      "require_direction": "improving|stable|worsening",
+      "allow_confidence_qualification": "Yes - show confidence band with trend",
+      "forbidden_diagnostic_language": "Never say 'diagnosed', 'disease progression', 'treatment needed'"
+    },
+    "insufficient_fallback": {
+      "always_renders": true,
+      "must_include_what_to_measure_next": true,
+      "can_show_population_prior": "Yes, as single driver",
+      "confidence_cap": "Max 30% (exploratory tier)"
+    }
+  },
+  "null_prevention_guarantees": {
+    "guarantee_1": "Every metric MUST match at least insufficient_fallback (priority 6)",
+    "guarantee_2": "insufficient_fallback ALWAYS renders a valid card",
+    "guarantee_3": "If confidence > 0, at least one of priorities 1-5 SHOULD match",
+    "guarantee_4": "If confidence > 0 and only insufficient_fallback matches -> BUG flagged in dev mode"
+  }
+}

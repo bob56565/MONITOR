@@ -1,0 +1,266 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Metric Type Map - ALL 35 METRICS (Deterministic Taxonomy)",
+  "description": "Explicit metric_type taxonomy for all 35 Part B metrics from METRIC_REGISTRY. Determines render mode priority and prevents NULL-based failures. MUST contain exactly 35 entries.",
+  "version": "1.0.0",
+  "metric_types": [
+    "LAB_PROXY_RANGE",
+    "INDEX_SCORE",
+    "PROBABILITY",
+    "CLASSIFICATION",
+    "TREND"
+  ],
+  "metrics": [
+    {
+      "metric_id": "estimated_hba1c_range",
+      "metric_type": "LAB_PROXY_RANGE",
+      "default_category": "LAB_RANGE_PROXY",
+      "primary_representation": "range",
+      "notes": "Hemoglobin A1c (%) - direct lab analog"
+    },
+    {
+      "metric_id": "insulin_resistance_probability",
+      "metric_type": "PROBABILITY",
+      "default_category": "PROBABILITY_ABNORMAL",
+      "primary_representation": "probability",
+      "notes": "Probability HOMA-IR would be elevated"
+    },
+    {
+      "metric_id": "metabolic_flexibility_score",
+      "metric_type": "INDEX_SCORE",
+      "default_category": "COMPOSITE_INDEX",
+      "primary_representation": "score",
+      "notes": "Fuel-switching efficiency 0-100"
+    },
+    {
+      "metric_id": "postprandial_dysregulation_phenotype",
+      "metric_type": "CLASSIFICATION",
+      "default_category": "PHYSIOLOGIC_PHENOTYPE",
+      "primary_representation": "classification",
+      "notes": "Glucose curve phenotype classification"
+    },
+    {
+      "metric_id": "prediabetes_trajectory_class",
+      "metric_type": "CLASSIFICATION",
+      "default_category": "PHYSIOLOGIC_PHENOTYPE",
+      "primary_representation": "classification",
+      "notes": "Risk trajectory classification"
+    },
+    {
+      "metric_id": "ldl_pattern_risk_proxy",
+      "metric_type": "LAB_PROXY_RANGE",
+      "default_category": "LAB_RANGE_PROXY",
+      "primary_representation": "range",
+      "notes": "LDL cholesterol mg/dL - calculated analogue"
+    },
+    {
+      "metric_id": "hdl_functional_likelihood",
+      "metric_type": "LAB_PROXY_RANGE",
+      "default_category": "LAB_RANGE_PROXY",
+      "primary_representation": "range",
+      "notes": "HDL cholesterol mg/dL + functional capacity"
+    },
+    {
+      "metric_id": "triglyceride_elevation_probability",
+      "metric_type": "PROBABILITY",
+      "default_category": "PROBABILITY_ABNORMAL",
+      "primary_representation": "probability",
+      "notes": "Probability TG > 150 mg/dL"
+    },
+    {
+      "metric_id": "atherogenic_risk_phenotype",
+      "metric_type": "CLASSIFICATION",
+      "default_category": "PHYSIOLOGIC_PHENOTYPE",
+      "primary_representation": "classification",
+      "notes": "Atherogenic lipoprotein burden class"
+    },
+    {
+      "metric_id": "cardiometabolic_risk_score",
+      "metric_type": "INDEX_SCORE",
+      "default_category": "COMPOSITE_INDEX",
+      "primary_representation": "score",
+      "notes": "Framingham-style CV + metabolic risk 0-100"
+    },
+    {
+      "metric_id": "metabolic_inflammatory_coupling_index",
+      "metric_type": "INDEX_SCORE",
+      "default_category": "COMPOSITE_INDEX",
+      "primary_representation": "score",
+      "notes": "Metabolic-inflammatory interaction 0-100"
+    },
+    {
+      "metric_id": "vitamin_d_sufficiency_likelihood",
+      "metric_type": "LAB_PROXY_RANGE",
+      "default_category": "LAB_RANGE_PROXY",
+      "primary_representation": "range",
+      "notes": "25-OH Vitamin D ng/mL"
+    },
+    {
+      "metric_id": "b12_functional_adequacy_score",
+      "metric_type": "INDEX_SCORE",
+      "default_category": "COMPOSITE_INDEX",
+      "primary_representation": "score",
+      "notes": "B12 functional status 0-100"
+    },
+    {
+      "metric_id": "iron_utilization_status_class",
+      "metric_type": "CLASSIFICATION",
+      "default_category": "PHYSIOLOGIC_PHENOTYPE",
+      "primary_representation": "classification",
+      "notes": "Iron stores + utilization classification"
+    },
+    {
+      "metric_id": "magnesium_adequacy_proxy",
+      "metric_type": "LAB_PROXY_RANGE",
+      "default_category": "LAB_RANGE_PROXY",
+      "primary_representation": "range",
+      "notes": "Serum magnesium mg/dL"
+    },
+    {
+      "metric_id": "micronutrient_risk_summary",
+      "metric_type": "CLASSIFICATION",
+      "default_category": "PHYSIOLOGIC_PHENOTYPE",
+      "primary_representation": "classification",
+      "notes": "Aggregate micronutrient deficiency risk"
+    },
+    {
+      "metric_id": "chronic_inflammation_index",
+      "metric_type": "INDEX_SCORE",
+      "default_category": "COMPOSITE_INDEX",
+      "primary_representation": "score",
+      "notes": "hs-CRP range proxy 0-100"
+    },
+    {
+      "metric_id": "acute_vs_chronic_pattern_classifier",
+      "metric_type": "CLASSIFICATION",
+      "default_category": "PHYSIOLOGIC_PHENOTYPE",
+      "primary_representation": "classification",
+      "notes": "Acute vs chronic inflammatory pattern"
+    },
+    {
+      "metric_id": "inflammation_driven_ir_modifier",
+      "metric_type": "INDEX_SCORE",
+      "default_category": "COMPOSITE_INDEX",
+      "primary_representation": "score",
+      "notes": "Inflammation × insulin resistance coupling 0-100"
+    },
+    {
+      "metric_id": "cardio_inflammatory_coupling_index",
+      "metric_type": "INDEX_SCORE",
+      "default_category": "COMPOSITE_INDEX",
+      "primary_representation": "score",
+      "notes": "CV-inflammatory coupling 0-100"
+    },
+    {
+      "metric_id": "recovery_capacity_score",
+      "metric_type": "INDEX_SCORE",
+      "default_category": "COMPOSITE_INDEX",
+      "primary_representation": "score",
+      "notes": "Physiologic recovery efficiency 0-100"
+    },
+    {
+      "metric_id": "cortisol_rhythm_integrity_score",
+      "metric_type": "INDEX_SCORE",
+      "default_category": "COMPOSITE_INDEX",
+      "primary_representation": "score",
+      "notes": "HPA axis rhythm quality 0-100"
+    },
+    {
+      "metric_id": "thyroid_functional_pattern",
+      "metric_type": "CLASSIFICATION",
+      "default_category": "PHYSIOLOGIC_PHENOTYPE",
+      "primary_representation": "classification",
+      "notes": "Thyroid function classification"
+    },
+    {
+      "metric_id": "autonomic_status",
+      "metric_type": "CLASSIFICATION",
+      "default_category": "PHYSIOLOGIC_PHENOTYPE",
+      "primary_representation": "classification",
+      "notes": "Autonomic nervous system balance"
+    },
+    {
+      "metric_id": "sympathetic_dominance_index",
+      "metric_type": "INDEX_SCORE",
+      "default_category": "COMPOSITE_INDEX",
+      "primary_representation": "score",
+      "notes": "Sympathetic activation 0-100"
+    },
+    {
+      "metric_id": "stress_adaptation_vs_maladaptation_classifier",
+      "metric_type": "CLASSIFICATION",
+      "default_category": "PHYSIOLOGIC_PHENOTYPE",
+      "primary_representation": "classification",
+      "notes": "Adaptive vs maladaptive stress response"
+    },
+    {
+      "metric_id": "burnout_risk_trajectory",
+      "metric_type": "CLASSIFICATION",
+      "default_category": "PHYSIOLOGIC_PHENOTYPE",
+      "primary_representation": "classification",
+      "notes": "Physiologic burnout trajectory"
+    },
+    {
+      "metric_id": "hydration_status",
+      "metric_type": "CLASSIFICATION",
+      "default_category": "PHYSIOLOGIC_PHENOTYPE",
+      "primary_representation": "classification",
+      "notes": "Hydration adequacy classification"
+    },
+    {
+      "metric_id": "electrolyte_regulation_efficiency_score",
+      "metric_type": "INDEX_SCORE",
+      "default_category": "COMPOSITE_INDEX",
+      "primary_representation": "score",
+      "notes": "Electrolyte homeostasis quality 0-100"
+    },
+    {
+      "metric_id": "renal_stress_index",
+      "metric_type": "INDEX_SCORE",
+      "default_category": "COMPOSITE_INDEX",
+      "primary_representation": "score",
+      "notes": "Kidney stress burden 0-100"
+    },
+    {
+      "metric_id": "dehydration_driven_creatinine_elevation_risk",
+      "metric_type": "PROBABILITY",
+      "default_category": "PROBABILITY_ABNORMAL",
+      "primary_representation": "probability",
+      "notes": "Probability creatinine elevation is prerenal"
+    },
+    {
+      "metric_id": "egfr_trajectory_class",
+      "metric_type": "CLASSIFICATION",
+      "default_category": "PHYSIOLOGIC_PHENOTYPE",
+      "primary_representation": "classification",
+      "notes": "Estimated GFR trend classification"
+    },
+    {
+      "metric_id": "allostatic_load_proxy",
+      "metric_type": "INDEX_SCORE",
+      "default_category": "COMPOSITE_INDEX",
+      "primary_representation": "score",
+      "notes": "Multi-system physiologic wear-and-tear 0-100"
+    },
+    {
+      "metric_id": "homeostatic_resilience_score",
+      "metric_type": "INDEX_SCORE",
+      "default_category": "COMPOSITE_INDEX",
+      "primary_representation": "score",
+      "notes": "Homeostatic capacity under stress 0-100"
+    },
+    {
+      "metric_id": "physiological_age_proxy",
+      "metric_type": "LAB_PROXY_RANGE",
+      "default_category": "LAB_RANGE_PROXY",
+      "primary_representation": "range",
+      "notes": "Biological age estimate (years)"
+    }
+  ],
+  "validation": {
+    "must_have_exactly_35_entries": true,
+    "all_metric_ids_must_match_METRIC_REGISTRY": true,
+    "no_duplicates": true,
+    "all_metric_types_must_be_valid_enum": true
+  }
+}
