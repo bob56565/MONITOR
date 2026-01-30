@@ -28,6 +28,7 @@ from app.part_b.inference.endocrine_neurohormonal import EndocrineNeurohormonalI
 from app.part_b.inference.renal_hydration import RenalHydrationInference
 from app.part_b.inference.comprehensive_integrated import ComprehensiveIntegratedInference
 from app.models.provenance import ProvenanceHelper
+from app.services.a2_orchestrator import a2_orchestrator
 
 
 class PartBOrchestrator:
@@ -62,6 +63,40 @@ class PartBOrchestrator:
         start_time = time.time()
         errors = []
         warnings = []
+        
+        # Step 0: Get A2 summary (required for phase-awareness)
+        a2_summary = a2_orchestrator.get_summary(
+            db=db,
+            submission_id=request.submission_id,
+            user_id=user_id
+        )
+        
+        if not a2_summary:
+            return PartBGenerationResponse(
+                status="error",
+                errors=["A2 analysis not found. Run A2 before generating Part B."],
+                warnings=["Part B requires completed A2 analysis for phase-awareness."],
+                generation_time_ms=int((time.time() - start_time) * 1000)
+            )
+        
+        # Check A2 gating eligibility
+        if not a2_summary["gating"]["eligible_for_part_b"]:
+            return PartBGenerationResponse(
+                status="error",
+                errors=["Not eligible for Part B according to A2 gating."],
+                warnings=a2_summary["gating"]["reasons"],
+                generation_time_ms=int((time.time() - start_time) * 1000)
+            )
+        
+        # Build A2 header block
+        a2_header_block = {
+            "a2_status": "completed",
+            "a2_run_id": a2_summary["a2_run_id"],
+            "a2_completed_at": a2_summary["created_at"],
+            "a2_coverage_snapshot": a2_summary["stream_coverage"],
+            "a2_conflicts_count": len(a2_summary["conflict_flags"]),
+            "a2_anchor_strength_snapshot": a2_summary["anchor_strength_by_domain"]
+        }
         
         # Step 1: Validate Part A submission exists and meets minimums
         submission = PartADataHelper.get_submission(db, request.submission_id, user_id)
@@ -157,11 +192,13 @@ class PartBOrchestrator:
         successful_confidences = [o.confidence_percent for o in all_outputs if o.status == OutputStatus.SUCCESS]
         avg_confidence = sum(successful_confidences) / len(successful_confidences) if successful_confidences else 0
         
-        # Step 4: Build report
+        # Step 4: Build report with A2 header
         report = PartBReport(
             report_id=f"partb_{user_id}_{int(datetime.utcnow().timestamp())}",
             user_id=user_id,
             submission_id=request.submission_id,
+            a2_run_id=a2_summary["a2_run_id"],
+            a2_header_block=a2_header_block,
             report_generated_at=datetime.utcnow(),
             data_window_start=datetime.utcnow() - timedelta(days=request.time_window_days),
             data_window_end=datetime.utcnow(),

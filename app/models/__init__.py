@@ -11,6 +11,12 @@ from app.models.part_a_models import (
     QualitativeEncodingRecord
 )
 from app.models.provenance import InferenceProvenance, ProvenanceHelper
+from app.models.a2_models import (
+    A2Run,
+    A2Summary,
+    A2Artifact,
+    A2StatusEnum
+)
 
 __all__ = [
     "User", "RawSensorData", "CalibratedFeatures", "InferenceResult", 
@@ -18,5 +24,6 @@ __all__ = [
     "PartASubmission", "SpecimenUpload", "SpecimenAnalyte",
     "ISFAnalyteStream", "VitalsRecord", "SOAPProfileRecord",
     "QualitativeEncodingRecord",
-    "InferenceProvenance", "ProvenanceHelper"
+    "InferenceProvenance", "ProvenanceHelper",
+    "A2Run", "A2Summary", "A2Artifact", "A2StatusEnum"
 ]

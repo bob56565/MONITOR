@@ -170,10 +170,17 @@ class PartBReport(BaseModel):
     """
     Complete Part B report for a user.
     Panel-structured with all 7 major sections.
+    Phase-aware: references specific A2 run and includes A2 header block.
     """
     report_id: str = Field(..., description="Unique report ID")
     user_id: int
     submission_id: str = Field(..., description="Part A submission ID this report is based on")
+    
+    # A2 Phase-Awareness (required)
+    a2_run_id: str = Field(..., description="A2 run ID this report references")
+    a2_header_block: Dict[str, Any] = Field(
+        ..., description="A2 snapshot: status, coverage, conflicts, anchor strength"
+    )
     
     # Time window
     report_generated_at: datetime = Field(default_factory=datetime.utcnow)

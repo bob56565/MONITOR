@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from datetime import datetime
+import logging
 import uuid
 import json
 
@@ -42,6 +43,9 @@ from ingestion.specimens.urine import parse_urine_specimen
 from ingestion.reports.imaging import parse_imaging_report
 
 from encoding.qualitative_to_quantitative import get_encoding_registry
+from app.services.a2_orchestrator import a2_orchestrator
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/part-a", tags=["part-a"])
 
@@ -111,12 +115,42 @@ def submit_part_a_data(
         
         db.commit()
         
+        # Trigger A2 processing synchronously (for demo/dev; could be async in production)
+        try:
+            a2_result = a2_orchestrator.run_synchronous(
+                db=db,
+                submission_id=submission_id,
+                user_id=current_user.id,
+                triggered_by="auto"
+            )
+            a2_run_id = a2_result.get("a2_run_id")
+            a2_status = a2_result.get("status", "unknown")
+        except Exception as e:
+            # A2 failed, but Part A succeeded
+            # Create a failed A2 run so UI can show error and retry
+            logger.error(f"A2 auto-trigger failed for submission {submission_id}: {str(e)}")
+            failed_run = a2_orchestrator.create_run(
+                db=db,
+                submission_id=submission_id,
+                user_id=current_user.id,
+                triggered_by="auto"
+            )
+            from app.models import A2StatusEnum
+            failed_run.status = A2StatusEnum.FAILED
+            failed_run.error_message = f"Auto-trigger failed: {str(e)}"
+            db.commit()
+            a2_run_id = failed_run.a2_run_id
+            a2_status = "failed"
+        
         return {
             "submission_id": submission_id,
             "status": "completed",
             "message": "PART A data successfully submitted and stored",
             "qualitative_encodings_applied": len(applied_rules),
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
+            # A2 contract fields
+            "a2_run_id": a2_run_id,
+            "a2_status": a2_status
         }
         
     except HTTPException:

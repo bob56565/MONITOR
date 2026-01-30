@@ -530,6 +530,55 @@
             <!-- Tab 2: Manual Entry -->
             <div class="tab-content" id="manualTab">
                 
+                <!-- IMPROVEMENT 1: DEMO MODE -->
+                <div class="section" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+                    <h3 style="color: white; margin-bottom: 15px;">🎬 Demo Mode</h3>
+                    <p style="opacity: 0.9; margin-bottom: 20px;">Generate a realistic, internally consistent patient scenario with one click. Perfect for testing the full pipeline!</p>
+                    
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <label style="color: white; opacity: 0.9; font-size: 0.9em;">Scenario</label>
+                            <select id="demoScenario" style="width: 100%; padding: 10px; border-radius: 4px; border: none;">
+                                <option value="healthy">Healthy Baseline</option>
+                                <option value="prediabetes">Prediabetes</option>
+                                <option value="hypertension">Hypertension (HTN)</option>
+                                <option value="dehydration">Dehydration/Overtraining</option>
+                                <option value="poor_sleep">Poor Sleep/Stress</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="color: white; opacity: 0.9; font-size: 0.9em;">Cadence (min)</label>
+                            <select id="demoCadence" style="width: 100%; padding: 10px; border-radius: 4px; border: none;">
+                                <option value="15">15 minutes</option>
+                                <option value="30">30 minutes</option>
+                                <option value="60" selected>60 minutes</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="color: white; opacity: 0.9; font-size: 0.9em;">Data Points</label>
+                            <select id="demoDataPoints" style="width: 100%; padding: 10px; border-radius: 4px; border: none;">
+                                <option value="6">6 points</option>
+                                <option value="12" selected>12 points</option>
+                                <option value="24">24 points</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="generateDemoPatient()" style="background: white; color: #667eea; border: none; flex: 1;">
+                            🎲 Generate Demo Patient
+                        </button>
+                        <button onclick="randomizeDemoPatient()" style="background: rgba(255,255,255,0.2); color: white; border: 2px solid white; flex: 1;">
+                            🔄 Randomize
+                        </button>
+                        <button onclick="resetForm()" style="background: rgba(255,255,255,0.2); color: white; border: 2px solid white;">
+                            🔁 Reset
+                        </button>
+                    </div>
+                    
+                    <div id="demoStatus" style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 4px; display: none;"></div>
+                </div>
+                
                 <!-- Part A1: Specimen Selection -->
                 <div class="section">
                     <h3>A1: Specimen Data Selection</h3>
@@ -636,27 +685,45 @@
                         <input type="text" id="isfTimestamps" placeholder="2026-01-29T08:00:00, 2026-01-29T09:00:00">
                     </div>
                     
-                    <h4 style="margin-top: 20px;">Signal Quality (Optional)</h4>
+                    <!-- IMPROVEMENT 3: Simplified Signal Quality -->
+                    <h4 style="margin-top: 20px;">Signal Quality (Simplified)</h4>
                     <div class="grid">
                         <div class="form-group">
-                            <label>Calibration Status</label>
-                            <select id="isfCalibration">
-                                <option value="recent">Recent (< 12hrs)</option>
-                                <option value="due">Due Soon</option>
-                                <option value="overdue">Overdue</option>
+                            <label>Overall Signal Quality</label>
+                            <select id="signalQualityBand">
+                                <option value="excellent">Excellent</option>
+                                <option value="good" selected>Good</option>
+                                <option value="fair">Fair</option>
+                                <option value="poor">Poor</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Sensor Drift Score (0-1)</label>
-                            <input type="number" id="isfDrift" step="0.01" min="0" max="1" value="0.1">
+                            <label>Signal Drop Frequency</label>
+                            <select id="signalDropFrequency">
+                                <option value="never" selected>Never</option>
+                                <option value="rare">Rare</option>
+                                <option value="sometimes">Sometimes</option>
+                                <option value="often">Often</option>
+                            </select>
                         </div>
                         <div class="form-group">
-                            <label>Noise Score (0-1)</label>
-                            <input type="number" id="isfNoise" step="0.01" min="0" max="1" value="0.05">
+                            <label>Reading Stability</label>
+                            <select id="readingStability">
+                                <option value="very_stable" selected>Very Stable</option>
+                                <option value="mostly_stable">Mostly Stable</option>
+                                <option value="somewhat_jumpy">Somewhat Jumpy</option>
+                                <option value="very_jumpy">Very Jumpy</option>
+                            </select>
                         </div>
                         <div class="form-group">
-                            <label>Dropout Percentage</label>
-                            <input type="number" id="isfDropout" step="0.1" min="0" max="100" value="2.0">
+                            <label>Last Calibration</label>
+                            <select id="lastCalibration">
+                                <option value="today" selected>Today</option>
+                                <option value="lt3days">&lt; 3 days</option>
+                                <option value="1week">1 week</option>
+                                <option value="gt1week">&gt; 1 week</option>
+                                <option value="never">Never</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -665,16 +732,51 @@
                 <div class="section">
                     <h3>A3: Vitals Data</h3>
                     
+                    <!-- IMPROVEMENT 4: HRV Wearable Gating -->
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" id="hasWearable" onchange="toggleHRVSection()" style="margin-right: 10px;">
+                            <span style="font-weight: 600;">I have a wearable that provides HRV data</span>
+                        </label>
+                    </div>
+                    
                     <h4>Cardiovascular Vitals</h4>
                     <div class="grid">
                         <div class="form-group">
                             <label>Resting Heart Rate (bpm, comma-separated)</label>
                             <input type="text" id="vitalHR" placeholder="65, 68, 62">
                         </div>
-                        <div class="form-group">
-                            <label>HRV RMSSD (ms, comma-separated)</label>
+                        
+                        <!-- HRV Section - Only shown if wearable checked -->
+                        <div class="form-group" id="hrvSection" style="display: none;">
+                            <label>HRV RMSSD (ms, comma-separated) <span style="color: #667eea;">Optional</span></label>
                             <input type="text" id="vitalHRV" placeholder="45, 52, 48">
                         </div>
+                        
+                        <!-- Recovery Proxies - Only shown if NO wearable -->
+                        <div id="recoveryProxiesSection" class="form-group" style="display: none; grid-column: span 2; background: #f8f9fa; padding: 15px; border-radius: 6px;">
+                            <h5 style="margin-bottom: 10px;">Recovery Indicators (No HRV wearable)</h5>
+                            <div class="grid" style="grid-template-columns: repeat(3, 1fr);">
+                                <div>
+                                    <label>Perceived Recovery (0-10)</label>
+                                    <input type="number" id="perceivedRecovery" min="0" max="10" step="1" placeholder="7">
+                                </div>
+                                <div>
+                                    <label>Soreness Level (0-10)</label>
+                                    <input type="number" id="sorenessLevel" min="0" max="10" step="1" placeholder="3">
+                                </div>
+                                <div>
+                                    <label>Yesterday's Training</label>
+                                    <select id="trainingIntensityYesterday">
+                                        <option value="">Not tracked</option>
+                                        <option value="low">Low</option>
+                                        <option value="moderate" selected>Moderate</option>
+                                        <option value="high">High</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div class="form-group">
                             <label>Blood Pressure Systolic (mmHg)</label>
                             <input type="text" id="vitalBPSys" placeholder="120, 118, 122">
@@ -863,10 +965,145 @@
                         <label>Free-text Symptom Description</label>
                         <textarea id="symptomsFreeText" placeholder="Describe any symptoms you're experiencing..."></textarea>
                     </div>
+                    
+                    <!-- IMPROVEMENT 2: Expanded A4 Context Fields (All Optional) -->
+                    <div style="background: #e7f0ff; padding: 20px; border-radius: 8px; margin-top: 30px; border-left: 4px solid #667eea;">
+                        <h4 style="color: #667eea; margin-bottom: 15px;">📋 Extended Clinical Context (Optional)</h4>
+                        <p style="color: #666; margin-bottom: 20px; font-size: 0.95em;">Additional context improves inference confidence. All fields optional.</p>
+                        
+                        <h5 style="margin-top: 20px; margin-bottom: 10px;">Identity & Environmental Context</h5>
+                        <div class="grid">
+                            <div class="form-group">
+                                <label>Race/Ethnicity <span style="color: #999;">(optional)</span></label>
+                                <select id="raceEthnicity">
+                                    <option value="">Prefer not to say</option>
+                                    <option value="american_indian">American Indian/Alaska Native</option>
+                                    <option value="asian">Asian</option>
+                                    <option value="black">Black/African American</option>
+                                    <option value="hispanic">Hispanic/Latino</option>
+                                    <option value="pacific_islander">Native Hawaiian/Pacific Islander</option>
+                                    <option value="white">White</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Climate Exposure <span style="color: #999;">(optional)</span></label>
+                                <select id="climateExposure">
+                                    <option value="">Not specified</option>
+                                    <option value="temperate">Temperate</option>
+                                    <option value="hot_humid">Hot/Humid</option>
+                                    <option value="hot_dry">Hot/Dry</option>
+                                    <option value="cold">Cold</option>
+                                    <option value="high_altitude">High Altitude</option>
+                                    <option value="variable">Variable/Seasonal</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Work Schedule <span style="color: #999;">(optional)</span></label>
+                                <select id="workSchedule">
+                                    <option value="">Not specified</option>
+                                    <option value="day">Day</option>
+                                    <option value="night">Night</option>
+                                    <option value="rotating">Rotating</option>
+                                    <option value="irregular">Irregular</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <h5 style="margin-top: 20px; margin-bottom: 10px;">Medical History Details</h5>
+                        <div class="grid">
+                            <div class="form-group">
+                                <label>Family History <span style="color: #999;">(optional)</span></label>
+                                <select id="familyHistory" multiple size="4" style="height: auto;">
+                                    <option value="diabetes">Diabetes</option>
+                                    <option value="cad">CAD</option>
+                                    <option value="hypertension">Hypertension</option>
+                                    <option value="thyroid">Thyroid Disease</option>
+                                    <option value="ckd">CKD</option>
+                                    <option value="stroke">Stroke</option>
+                                    <option value="autoimmune">Autoimmune Disease</option>
+                                </select>
+                                <small style="color: #666;">Hold Ctrl/Cmd to select multiple</small>
+                            </div>
+                            <div class="form-group">
+                                <label>Current Medications <span style="color: #999;">(optional)</span></label>
+                                <textarea id="currentMedications" placeholder="e.g., Metformin 500mg 2x daily, Lisinopril 10mg daily" rows="3"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Supplements/Vitamins <span style="color: #999;">(optional)</span></label>
+                                <textarea id="supplementsVitamins" placeholder="e.g., Vitamin D 2000IU daily, Magnesium 400mg" rows="3"></textarea>
+                            </div>
+                        </div>
+                        
+                        <h5 style="margin-top: 20px; margin-bottom: 10px;">Lifestyle Details</h5>
+                        <div class="grid">
+                            <div class="form-group">
+                                <label>Smoking/Vaping <span style="color: #999;">(optional)</span></label>
+                                <select id="smokingVaping">
+                                    <option value="">Not specified</option>
+                                    <option value="never">Never</option>
+                                    <option value="former">Former</option>
+                                    <option value="current">Current</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Exercise Type <span style="color: #999;">(optional)</span></label>
+                                <select id="exerciseType">
+                                    <option value="">Not specified</option>
+                                    <option value="cardio">Cardio</option>
+                                    <option value="strength">Strength</option>
+                                    <option value="mixed">Mixed</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Recent Training Change <span style="color: #999;">(optional)</span></label>
+                                <select id="recentTrainingChange">
+                                    <option value="">No change</option>
+                                    <option value="increased">Increased</option>
+                                    <option value="decreased">Decreased</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <h5 style="margin-top: 20px; margin-bottom: 10px;">Stress & Mental Health</h5>
+                        <div class="grid">
+                            <div class="form-group">
+                                <label>Current Stress Level (0-10) <span style="color: #999;">(optional)</span></label>
+                                <input type="number" id="stressLevel" min="0" max="10" step="1" placeholder="5">
+                            </div>
+                            <div class="form-group">
+                                <label>Mood State <span style="color: #999;">(optional)</span></label>
+                                <select id="moodState">
+                                    <option value="">Not specified</option>
+                                    <option value="stable">Stable</option>
+                                    <option value="low">Low</option>
+                                    <option value="anxious">Anxious</option>
+                                    <option value="irritable">Irritable</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Sleep Disruption Cause <span style="color: #999;">(optional)</span></label>
+                                <select id="sleepDisruptionCause">
+                                    <option value="">None</option>
+                                    <option value="stress">Stress</option>
+                                    <option value="shift_work">Shift Work</option>
+                                    <option value="childcare">Newborn/Childcare</option>
+                                    <option value="pain">Pain</option>
+                                    <option value="apnea">Possible Apnea</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Submit Button -->
                 <div style="text-align: center; margin-top: 30px;">
+                    <!-- IMPROVEMENT 5: Validation Warning -->
+                    <div id="validationWarnings" style="display: none; background: #fff3cd; border: 1px solid #ffc107; color: #856404; padding: 15px; border-radius: 6px; margin-bottom: 20px; text-align: left;">
+                        <strong>⚠️ Validation Issues:</strong>
+                        <ul id="validationList" style="margin: 10px 0 0 20px;"></ul>
+                    </div>
+                    
                     <button onclick="submitManualData()" style="padding: 15px 50px; font-size: 1.1em;">
                         📤 Submit Part A Data
                     </button>
@@ -877,18 +1114,18 @@
             <!-- Tab 3: Data Quality (A2) -->
             <div class="tab-content" id="qualityTab">
                 <div class="section">
-                    <h3>A2: Data Quality & Gating</h3>
-                    <p style="margin-bottom: 20px; color: #666;">Check data completeness and eligibility status for Part B inference</p>
+                    <h3>A2: Data Quality & Truth Layer</h3>
+                    <p style="margin-bottom: 20px; color: #666;">A2 demonstrates what is trustworthy about your data before generating Part B outputs.</p>
                     
                     <div class="form-group">
                         <label>Submission ID</label>
                         <input type="text" id="qualitySubmissionId" placeholder="Enter submission ID from Part A">
                     </div>
                     
-                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                        <button onclick="checkCompleteness()">Check Completeness</button>
-                        <button onclick="checkGatingStatus()">Check Gating Status</button>
-                        <button onclick="checkPriorsExample()">Check Priors (Glucose)</button>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 20px;">
+                        <button onclick="runA2Analysis()">▶️ Run A2 Analysis</button>
+                        <button onclick="fetchA2Summary(document.getElementById('qualitySubmissionId').value || currentSubmissionId)">📊 Load A2 Summary</button>
+                        <button onclick="viewA2RunDetails(document.getElementById('qualitySubmissionId').value || currentSubmissionId)">📋 View Run Details</button>
                     </div>
                     
                     <div id="qualityResults" style="margin-top: 30px;"></div>
@@ -917,9 +1154,8 @@
 
     <script>
         // Configuration
-        const API_BASE = window.location.hostname === 'localhost' ? 
-            'http://localhost:8000' : 
-            `${window.location.protocol}//${window.location.hostname}:8000`;
+        // Use origin directly - works for both localhost and Codespaces
+        const API_BASE = window.location.origin;
         
         let authToken = localStorage.getItem('authToken');
         let currentSubmissionId = null;
@@ -942,21 +1178,25 @@
             }
             
             try {
+                console.log('Signup attempt:', { email, password: '***' });
                 const response = await fetch(`${API_BASE}/auth/signup`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
                 });
                 
+                console.log('Signup response status:', response.status);
                 const data = await response.json();
+                console.log('Signup response data:', data);
                 
                 if (response.ok) {
                     showStatus('authStatus', '✅ Account created! Logging you in...', 'success');
                     setTimeout(() => login(), 1000);
                 } else {
-                    showStatus('authStatus', `❌ ${data.detail || 'Signup failed'}`, 'error');
+                    showStatus('authStatus', `❌ ${data.detail || JSON.stringify(data)}`, 'error');
                 }
             } catch (error) {
+                console.error('Signup error:', error);
                 showStatus('authStatus', `❌ Error: ${error.message}`, 'error');
             }
         }
@@ -971,17 +1211,17 @@
             }
             
             try {
-                const formData = new URLSearchParams();
-                formData.append('username', email);
-                formData.append('password', password);
-                
+                console.log('Login attempt:', { email, password: '***' });
+                console.log('Login URL:', `${API_BASE}/auth/login`);
                 const response = await fetch(`${API_BASE}/auth/login`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: formData
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
                 });
                 
+                console.log('Login response status:', response.status);
                 const data = await response.json();
+                console.log('Login response data:', data);
                 
                 if (response.ok) {
                     authToken = data.access_token;
@@ -993,9 +1233,10 @@
                         document.getElementById('mainContent').style.display = 'block';
                     }, 500);
                 } else {
-                    showStatus('authStatus', `❌ ${data.detail || 'Login failed'}`, 'error');
+                    showStatus('authStatus', `❌ ${data.detail || JSON.stringify(data)}`, 'error');
                 }
             } catch (error) {
+                console.error('Login error:', error);
                 showStatus('authStatus', `❌ Error: ${error.message}`, 'error');
             }
         }
@@ -1008,6 +1249,563 @@
             showStatus('authStatus', 'ℹ️ Logged out', 'info');
         }
 
+        // ===== IMPROVEMENT 1: DEMO MODE FUNCTIONS =====
+        
+        function generateDemoPatient() {
+            const scenario = document.getElementById('demoScenario').value;
+            const cadence = parseInt(document.getElementById('demoCadence').value);
+            const dataPoints = parseInt(document.getElementById('demoDataPoints').value);
+            
+            console.log('Generating demo patient:', {scenario, cadence, dataPoints});
+            
+            const demoStatus = document.getElementById('demoStatus');
+            demoStatus.style.display = 'block';
+            demoStatus.innerHTML = `🔄 Generating ${scenario} scenario with ${dataPoints} data points (${cadence}min intervals)...`;
+            
+            // Generate demo data based on scenario
+            const demoData = generateScenarioData(scenario, dataPoints, cadence);
+            
+            // Populate all form fields
+            populateFormFields(demoData);
+            
+            // Also populate any currently selected specimens
+            const selectedSpecimens = [];
+            if (document.getElementById('specimenBlood').checked) selectedSpecimens.push('blood');
+            if (document.getElementById('specimenSaliva').checked) selectedSpecimens.push('saliva');
+            if (document.getElementById('specimenSweat').checked) selectedSpecimens.push('sweat');
+            if (document.getElementById('specimenUrine').checked) selectedSpecimens.push('urine');
+            
+            if (selectedSpecimens.length > 0) {
+                const demographics = {
+                    age: demoData.age,
+                    sex: demoData.sex
+                };
+                const specimenPayloads = generateDemoSpecimenPayload(scenario, demographics);
+                selectedSpecimens.forEach(type => {
+                    populateSpecimenFields(type, specimenPayloads[type]);
+                });
+            }
+            
+            demoStatus.innerHTML = `✅ Demo patient generated! Scenario: <strong>${scenario}</strong>. Ready to submit!`;
+            
+            setTimeout(() => {
+                demoStatus.style.display = 'none';
+            }, 5000);
+        }
+        
+        function randomizeDemoPatient() {
+            const scenarios = ['healthy', 'prediabetes', 'hypertension', 'dehydration', 'poor_sleep'];
+            const randomScenario = scenarios[Math.floor(Math.random() * scenarios.length)];
+            document.getElementById('demoScenario').value = randomScenario;
+            generateDemoPatient();
+        }
+        
+        function resetForm() {
+            if (confirm('Clear all form fields?')) {
+                // Clear all inputs
+                document.querySelectorAll('#manualTab input[type="text"], #manualTab input[type="number"], #manualTab textarea').forEach(el => el.value = '');
+                document.querySelectorAll('#manualTab input[type="checkbox"]').forEach(el => el.checked = false);
+                document.querySelectorAll('#manualTab select').forEach(el => el.selectedIndex = 0);
+                
+                // Reset specimen fields visibility
+                document.querySelectorAll('.specimen-fields').forEach(el => el.classList.add('hidden'));
+                document.querySelectorAll('.specimen-option').forEach(el => el.classList.remove('selected'));
+                
+                // Clear specimen analyte containers
+                document.getElementById('bloodAnalytes').innerHTML = '';
+                document.getElementById('salivaAnalytes').innerHTML = '';
+                document.getElementById('sweatAnalytes').innerHTML = '';
+                document.getElementById('urineAnalytes').innerHTML = '';
+                
+                showStatus('demoStatus', '✅ Form reset!', 'success');
+                document.getElementById('demoStatus').style.display = 'block';
+                setTimeout(() => {
+                    document.getElementById('demoStatus').style.display = 'none';
+                }, 3000);
+            }
+        }
+        
+        function generateScenarioData(scenario, dataPoints, cadence) {
+            const now = new Date();
+            const baseData = {
+                age: 30 + Math.floor(Math.random() * 30),
+                sex: Math.random() > 0.5 ? 'male' : 'female',
+                height: 160 + Math.floor(Math.random() * 30),
+                weight: 60 + Math.floor(Math.random() * 30)
+            };
+            
+            // Scenario-specific modifications
+            let glucoseBase = 95, lactateBase = 1.2, hrBase = 65, hrvBase = 50, bpSys = 120, bpDia = 80;
+            
+            switch(scenario) {
+                case 'prediabetes':
+                    glucoseBase = 110;
+                    baseData.weight += 10;
+                    bpSys += 10;
+                    break;
+                case 'hypertension':
+                    bpSys = 145;
+                    bpDia = 92;
+                    hrBase += 5;
+                    hrvBase -= 10;
+                    break;
+                case 'dehydration':
+                    lactateBase = 2.0;
+                    hrBase += 10;
+                    hrvBase -= 15;
+                    break;
+                case 'poor_sleep':
+                    hrBase += 8;
+                    hrvBase -= 20;
+                    bpSys += 5;
+                    break;
+            }
+            
+            // Generate time-series
+            const timestamps = [];
+            const glucose = [];
+            const lactate = [];
+            const hr = [];
+            const hrv = [];
+            const bpSysArray = [];
+            const bpDiaArray = [];
+            
+            for (let i = 0; i < dataPoints; i++) {
+                const ts = new Date(now.getTime() - (dataPoints - 1 - i) * cadence * 60000);
+                timestamps.push(ts.toISOString());
+                
+                glucose.push((glucoseBase + (Math.random() - 0.5) * 15).toFixed(1));
+                lactate.push((lactateBase + (Math.random() - 0.5) * 0.4).toFixed(2));
+                hr.push(Math.round(hrBase + (Math.random() - 0.5) * 8));
+                hrv.push(Math.round(hrvBase + (Math.random() - 0.5) * 12));
+                bpSysArray.push(Math.round(bpSys + (Math.random() - 0.5) * 8));
+                bpDiaArray.push(Math.round(bpDia + (Math.random() - 0.5) * 6));
+            }
+            
+            return {
+                ...baseData,
+                timestamps: timestamps.join(', '),
+                glucose: glucose.join(', '),
+                lactate: lactate.join(', '),
+                hr: hr.join(', '),
+                hrv: hrv.join(', '),
+                bpSys: bpSysArray.join(', '),
+                bpDia: bpDiaArray.join(', '),
+                scenario
+            };
+        }
+        
+        function populateFormFields(data) {
+            // Demographics
+            document.getElementById('soapAge').value = data.age;
+            document.getElementById('soapSex').value = data.sex;
+            document.getElementById('soapHeight').value = data.height;
+            document.getElementById('soapWeight').value = data.weight;
+            
+            // ISF Monitor data
+            document.getElementById('isfGlucose').value = data.glucose;
+            document.getElementById('isfLactate').value = data.lactate;
+            document.getElementById('isfTimestamps').value = data.timestamps;
+            
+            // Signal quality - set to good defaults
+            document.getElementById('signalQualityBand').value = 'good';
+            document.getElementById('signalDropFrequency').value = 'never';
+            document.getElementById('readingStability').value = 'very_stable';
+            document.getElementById('lastCalibration').value = 'today';
+            
+            // Vitals
+            document.getElementById('vitalHR').value = data.hr;
+            document.getElementById('vitalBPSys').value = data.bpSys;
+            document.getElementById('vitalBPDia').value = data.bpDia;
+            
+            // HRV if wearable checked
+            if (document.getElementById('hasWearable').checked) {
+                document.getElementById('vitalHRV').value = data.hrv;
+            }
+            
+            // Sleep/activity
+            document.getElementById('vitalSleep').value = (7 + Math.random()).toFixed(1);
+            document.getElementById('vitalSleepEff').value = (82 + Math.random() * 10).toFixed(0);
+            document.getElementById('vitalSteps').value = Math.round(6000 + Math.random() * 6000);
+            document.getElementById('vitalActive').value = Math.round(30 + Math.random() * 40);
+            
+            // Scenario-specific conditions and encodings
+            if (data.scenario === 'prediabetes') {
+                document.getElementById('condPrediabetes').checked = true;
+                document.getElementById('dietPattern').value = 'standard';
+                document.getElementById('dietSodium').value = 'normal';
+                document.getElementById('dietHydration').value = 'normal';
+            } else if (data.scenario === 'hypertension') {
+                document.getElementById('condHTN').checked = true;
+                // Trigger encoding: high sodium diet
+                document.getElementById('dietPattern').value = 'standard';
+                document.getElementById('dietSodium').value = 'high';  // Triggers DIET_SODIUM_HIGH encoding
+                document.getElementById('dietHydration').value = 'normal';
+            } else if (data.scenario === 'dehydration') {
+                // Trigger encoding: low hydration
+                document.getElementById('dietPattern').value = 'standard';
+                document.getElementById('dietSodium').value = 'high';  // Triggers DIET_SODIUM_HIGH encoding
+                document.getElementById('dietHydration').value = 'low';
+            } else if (data.scenario === 'poor_sleep') {
+                // Trigger encoding: high caffeine
+                document.getElementById('dietPattern').value = 'standard';
+                document.getElementById('dietSodium').value = 'normal';
+                document.getElementById('dietHydration').value = 'normal';
+                document.getElementById('dietCaffeine').value = 'high';  // Triggers DIET_CAFFEINE_HIGH encoding
+            } else {
+                // Healthy baseline
+                document.getElementById('dietPattern').value = 'standard';
+                document.getElementById('dietSodium').value = 'normal';
+                document.getElementById('dietHydration').value = 'normal';
+            }
+            
+            // Activity and sleep
+            document.getElementById('activityLevel').value = 'moderate';
+            document.getElementById('sleepSchedule').value = 'consistent';
+        }
+
+        // ===== IMPROVEMENT 4: HRV WEARABLE TOGGLE =====
+        
+        function toggleHRVSection() {
+            const hasWearable = document.getElementById('hasWearable').checked;
+            const hrvSection = document.getElementById('hrvSection');
+            const recoverySection = document.getElementById('recoveryProxiesSection');
+            
+            if (hasWearable) {
+                hrvSection.style.display = 'block';
+                recoverySection.style.display = 'none';
+            } else {
+                hrvSection.style.display = 'none';
+                recoverySection.style.display = 'block';
+            }
+        }
+
+        // ===== SPECIMEN-AWARE DEMO AUTO-POPULATION =====
+        
+        function generateDemoSpecimenPayload(scenario, demographics) {
+            // Returns scenario-specific specimen data for blood, saliva, sweat, urine
+            const payloads = {
+                blood: null,
+                saliva: null,
+                sweat: null,
+                urine: null
+            };
+            
+            // BLOOD SPECIMEN DATA
+            payloads.blood = {
+                datetime: new Date().toISOString().slice(0, 16),
+                fasting: 'fasting',
+                analytes: []
+            };
+            
+            switch(scenario) {
+                case 'healthy':
+                    payloads.blood.analytes = [
+                        { name: 'glucose', value: 88, unit: 'mg/dL' },
+                        { name: 'hba1c', value: 5.2, unit: '%' },
+                        { name: 'total_cholesterol', value: 175, unit: 'mg/dL' },
+                        { name: 'ldl', value: 95, unit: 'mg/dL' },
+                        { name: 'hdl', value: 62, unit: 'mg/dL' },
+                        { name: 'triglycerides', value: 85, unit: 'mg/dL' },
+                        { name: 'sodium_na', value: 140, unit: 'mEq/L' },
+                        { name: 'potassium_k', value: 4.2, unit: 'mEq/L' },
+                        { name: 'creatinine', value: 0.95, unit: 'mg/dL' },
+                        { name: 'bun', value: 15, unit: 'mg/dL' }
+                    ];
+                    break;
+                case 'prediabetes':
+                    payloads.blood.analytes = [
+                        { name: 'glucose', value: 108, unit: 'mg/dL' },
+                        { name: 'hba1c', value: 5.9, unit: '%' },
+                        { name: 'total_cholesterol', value: 215, unit: 'mg/dL' },
+                        { name: 'ldl', value: 135, unit: 'mg/dL' },
+                        { name: 'hdl', value: 42, unit: 'mg/dL' },
+                        { name: 'triglycerides', value: 165, unit: 'mg/dL' },
+                        { name: 'sodium_na', value: 141, unit: 'mEq/L' },
+                        { name: 'potassium_k', value: 4.1, unit: 'mEq/L' },
+                        { name: 'creatinine', value: 0.98, unit: 'mg/dL' },
+                        { name: 'bun', value: 17, unit: 'mg/dL' }
+                    ];
+                    break;
+                case 'hypertension':
+                    payloads.blood.analytes = [
+                        { name: 'glucose', value: 94, unit: 'mg/dL' },
+                        { name: 'hba1c', value: 5.4, unit: '%' },
+                        { name: 'total_cholesterol', value: 195, unit: 'mg/dL' },
+                        { name: 'ldl', value: 118, unit: 'mg/dL' },
+                        { name: 'hdl', value: 48, unit: 'mg/dL' },
+                        { name: 'triglycerides', value: 145, unit: 'mg/dL' },
+                        { name: 'sodium_na', value: 142, unit: 'mEq/L' },
+                        { name: 'potassium_k', value: 4.0, unit: 'mEq/L' },
+                        { name: 'creatinine', value: 1.05, unit: 'mg/dL' },
+                        { name: 'bun', value: 18, unit: 'mg/dL' }
+                    ];
+                    break;
+                case 'dehydration':
+                    payloads.blood.analytes = [
+                        { name: 'glucose', value: 92, unit: 'mg/dL' },
+                        { name: 'hba1c', value: 5.3, unit: '%' },
+                        { name: 'sodium_na', value: 144, unit: 'mEq/L' },
+                        { name: 'potassium_k', value: 4.3, unit: 'mEq/L' },
+                        { name: 'chloride_cl', value: 106, unit: 'mEq/L' },
+                        { name: 'creatinine', value: 1.15, unit: 'mg/dL' },
+                        { name: 'bun', value: 24, unit: 'mg/dL' }
+                    ];
+                    break;
+                case 'poor_sleep':
+                    payloads.blood.analytes = [
+                        { name: 'glucose', value: 96, unit: 'mg/dL' },
+                        { name: 'hba1c', value: 5.5, unit: '%' },
+                        { name: 'total_cholesterol', value: 205, unit: 'mg/dL' },
+                        { name: 'ldl', value: 125, unit: 'mg/dL' },
+                        { name: 'hdl', value: 45, unit: 'mg/dL' },
+                        { name: 'triglycerides', value: 155, unit: 'mg/dL' },
+                        { name: 'sodium_na', value: 140, unit: 'mEq/L' },
+                        { name: 'potassium_k', value: 4.1, unit: 'mEq/L' }
+                    ];
+                    break;
+            }
+            
+            // SALIVA SPECIMEN DATA
+            payloads.saliva = {
+                type: 'serial',
+                analytes: []
+            };
+            
+            const now = new Date();
+            const morning = new Date(now);
+            morning.setHours(8, 0, 0, 0);
+            const evening = new Date(now);
+            evening.setHours(20, 0, 0, 0);
+            
+            switch(scenario) {
+                case 'healthy':
+                    payloads.saliva.analytes = [
+                        { name: 'cortisol_morning', value: 0.58, unit: 'ug/dL', timestamp: morning.toISOString().slice(0, 16) },
+                        { name: 'cortisol_evening', value: 0.12, unit: 'ug/dL', timestamp: evening.toISOString().slice(0, 16) },
+                        { name: 'dhea_s', value: 185, unit: 'ug/dL', timestamp: morning.toISOString().slice(0, 16) },
+                        { name: 'ph', value: 7.0, unit: 'pH', timestamp: morning.toISOString().slice(0, 16) }
+                    ];
+                    break;
+                case 'prediabetes':
+                    payloads.saliva.analytes = [
+                        { name: 'cortisol_morning', value: 0.62, unit: 'ug/dL', timestamp: morning.toISOString().slice(0, 16) },
+                        { name: 'cortisol_evening', value: 0.18, unit: 'ug/dL', timestamp: evening.toISOString().slice(0, 16) },
+                        { name: 'dhea_s', value: 165, unit: 'ug/dL', timestamp: morning.toISOString().slice(0, 16) },
+                        { name: 'ph', value: 6.9, unit: 'pH', timestamp: morning.toISOString().slice(0, 16) }
+                    ];
+                    break;
+                case 'hypertension':
+                    payloads.saliva.analytes = [
+                        { name: 'cortisol_morning', value: 0.68, unit: 'ug/dL', timestamp: morning.toISOString().slice(0, 16) },
+                        { name: 'cortisol_evening', value: 0.16, unit: 'ug/dL', timestamp: evening.toISOString().slice(0, 16) },
+                        { name: 'dhea_s', value: 175, unit: 'ug/dL', timestamp: morning.toISOString().slice(0, 16) },
+                        { name: 'ph', value: 7.1, unit: 'pH', timestamp: morning.toISOString().slice(0, 16) }
+                    ];
+                    break;
+                case 'dehydration':
+                    payloads.saliva.analytes = [
+                        { name: 'cortisol_morning', value: 0.72, unit: 'ug/dL', timestamp: morning.toISOString().slice(0, 16) },
+                        { name: 'cortisol_evening', value: 0.20, unit: 'ug/dL', timestamp: evening.toISOString().slice(0, 16) },
+                        { name: 'ph', value: 6.7, unit: 'pH', timestamp: morning.toISOString().slice(0, 16) }
+                    ];
+                    break;
+                case 'poor_sleep':
+                    payloads.saliva.analytes = [
+                        { name: 'cortisol_morning', value: 0.65, unit: 'ug/dL', timestamp: morning.toISOString().slice(0, 16) },
+                        { name: 'cortisol_evening', value: 0.28, unit: 'ug/dL', timestamp: evening.toISOString().slice(0, 16) },
+                        { name: 'dhea_s', value: 155, unit: 'ug/dL', timestamp: morning.toISOString().slice(0, 16) },
+                        { name: 'ph', value: 6.8, unit: 'pH', timestamp: morning.toISOString().slice(0, 16) }
+                    ];
+                    break;
+            }
+            
+            // SWEAT SPECIMEN DATA
+            payloads.sweat = {
+                datetime: new Date().toISOString().slice(0, 16),
+                rate: null,
+                analytes: []
+            };
+            
+            switch(scenario) {
+                case 'healthy':
+                    payloads.sweat.rate = 0.85;
+                    payloads.sweat.analytes = [
+                        { name: 'sodium_na', value: 42, unit: 'mmol/L' },
+                        { name: 'chloride_cl', value: 38, unit: 'mmol/L' },
+                        { name: 'potassium_k', value: 6.5, unit: 'mmol/L' },
+                        { name: 'lactate', value: 12, unit: 'mmol/L' }
+                    ];
+                    break;
+                case 'prediabetes':
+                    payloads.sweat.rate = 0.78;
+                    payloads.sweat.analytes = [
+                        { name: 'sodium_na', value: 45, unit: 'mmol/L' },
+                        { name: 'chloride_cl', value: 40, unit: 'mmol/L' },
+                        { name: 'potassium_k', value: 6.8, unit: 'mmol/L' },
+                        { name: 'lactate', value: 15, unit: 'mmol/L' }
+                    ];
+                    break;
+                case 'hypertension':
+                    payloads.sweat.rate = 0.82;
+                    payloads.sweat.analytes = [
+                        { name: 'sodium_na', value: 52, unit: 'mmol/L' },
+                        { name: 'chloride_cl', value: 46, unit: 'mmol/L' },
+                        { name: 'potassium_k', value: 7.2, unit: 'mmol/L' },
+                        { name: 'lactate', value: 13, unit: 'mmol/L' }
+                    ];
+                    break;
+                case 'dehydration':
+                    payloads.sweat.rate = 1.15;
+                    payloads.sweat.analytes = [
+                        { name: 'sodium_na', value: 68, unit: 'mmol/L' },
+                        { name: 'chloride_cl', value: 58, unit: 'mmol/L' },
+                        { name: 'potassium_k', value: 8.5, unit: 'mmol/L' },
+                        { name: 'lactate', value: 22, unit: 'mmol/L' }
+                    ];
+                    break;
+                case 'poor_sleep':
+                    payloads.sweat.rate = 0.75;
+                    payloads.sweat.analytes = [
+                        { name: 'sodium_na', value: 44, unit: 'mmol/L' },
+                        { name: 'chloride_cl', value: 39, unit: 'mmol/L' },
+                        { name: 'potassium_k', value: 6.6, unit: 'mmol/L' },
+                        { name: 'lactate', value: 14, unit: 'mmol/L' }
+                    ];
+                    break;
+            }
+            
+            // URINE SPECIMEN DATA
+            payloads.urine = {
+                datetime: new Date().toISOString().slice(0, 16),
+                analytes: []
+            };
+            
+            switch(scenario) {
+                case 'healthy':
+                    payloads.urine.analytes = [
+                        { name: 'specific_gravity', value: '1.015', unit: 'unitless' },
+                        { name: 'ph', value: '6.2', unit: 'pH' },
+                        { name: 'protein', value: 'negative', unit: 'posneg' },
+                        { name: 'glucose', value: 'negative', unit: 'posneg' },
+                        { name: 'ketones', value: 'negative', unit: 'posneg' }
+                    ];
+                    break;
+                case 'prediabetes':
+                    payloads.urine.analytes = [
+                        { name: 'specific_gravity', value: '1.018', unit: 'unitless' },
+                        { name: 'ph', value: '5.8', unit: 'pH' },
+                        { name: 'protein', value: 'negative', unit: 'posneg' },
+                        { name: 'glucose', value: 'negative', unit: 'posneg' },
+                        { name: 'ketones', value: 'negative', unit: 'posneg' }
+                    ];
+                    break;
+                case 'hypertension':
+                    payloads.urine.analytes = [
+                        { name: 'specific_gravity', value: '1.016', unit: 'unitless' },
+                        { name: 'ph', value: '6.0', unit: 'pH' },
+                        { name: 'protein', value: 'trace', unit: 'posneg' },
+                        { name: 'glucose', value: 'negative', unit: 'posneg' },
+                        { name: 'ketones', value: 'negative', unit: 'posneg' }
+                    ];
+                    break;
+                case 'dehydration':
+                    payloads.urine.analytes = [
+                        { name: 'specific_gravity', value: '1.028', unit: 'unitless' },
+                        { name: 'ph', value: '5.5', unit: 'pH' },
+                        { name: 'protein', value: 'trace', unit: 'posneg' },
+                        { name: 'glucose', value: 'negative', unit: 'posneg' },
+                        { name: 'ketones', value: 'trace', unit: 'posneg' }
+                    ];
+                    break;
+                case 'poor_sleep':
+                    payloads.urine.analytes = [
+                        { name: 'specific_gravity', value: '1.017', unit: 'unitless' },
+                        { name: 'ph', value: '6.1', unit: 'pH' },
+                        { name: 'protein', value: 'negative', unit: 'posneg' },
+                        { name: 'glucose', value: 'negative', unit: 'posneg' },
+                        { name: 'ketones', value: 'negative', unit: 'posneg' }
+                    ];
+                    break;
+            }
+            
+            return payloads;
+        }
+        
+        function populateSpecimenFields(type, payloadData) {
+            // Populate specimen-specific fields with demo data
+            console.log(`Populating ${type} specimen with demo data:`, payloadData);
+            
+            if (type === 'blood') {
+                document.getElementById('bloodDateTime').value = payloadData.datetime;
+                document.getElementById('bloodFasting').value = payloadData.fasting;
+                
+                // Clear existing analytes
+                document.getElementById('bloodAnalytes').innerHTML = '';
+                
+                // Add each analyte
+                payloadData.analytes.forEach(analyte => {
+                    addBloodAnalyte();
+                    const entries = document.querySelectorAll('#bloodAnalytes .analyte-entry');
+                    const lastEntry = entries[entries.length - 1];
+                    lastEntry.querySelector('.blood-analyte-name').value = analyte.name;
+                    lastEntry.querySelector('.blood-analyte-value').value = analyte.value;
+                    lastEntry.querySelector('.blood-analyte-unit').value = analyte.unit;
+                });
+            } else if (type === 'saliva') {
+                document.getElementById('salivaType').value = payloadData.type;
+                
+                // Clear existing analytes
+                document.getElementById('salivaAnalytes').innerHTML = '';
+                
+                // Add each analyte
+                payloadData.analytes.forEach(analyte => {
+                    addSalivaAnalyte();
+                    const entries = document.querySelectorAll('#salivaAnalytes .analyte-entry');
+                    const lastEntry = entries[entries.length - 1];
+                    lastEntry.querySelector('.saliva-analyte-name').value = analyte.name;
+                    lastEntry.querySelector('.saliva-analyte-value').value = analyte.value;
+                    lastEntry.querySelector('.saliva-analyte-unit').value = analyte.unit;
+                    if (analyte.timestamp) {
+                        lastEntry.querySelector('.saliva-analyte-timestamp').value = analyte.timestamp;
+                    }
+                });
+            } else if (type === 'sweat') {
+                document.getElementById('sweatDateTime').value = payloadData.datetime;
+                if (payloadData.rate) {
+                    document.getElementById('sweatRate').value = payloadData.rate;
+                }
+                
+                // Clear existing analytes
+                document.getElementById('sweatAnalytes').innerHTML = '';
+                
+                // Add each analyte
+                payloadData.analytes.forEach(analyte => {
+                    addSweatAnalyte();
+                    const entries = document.querySelectorAll('#sweatAnalytes .analyte-entry');
+                    const lastEntry = entries[entries.length - 1];
+                    lastEntry.querySelector('.sweat-analyte-name').value = analyte.name;
+                    lastEntry.querySelector('.sweat-analyte-value').value = analyte.value;
+                    lastEntry.querySelector('.sweat-analyte-unit').value = analyte.unit;
+                });
+            } else if (type === 'urine') {
+                document.getElementById('urineDateTime').value = payloadData.datetime;
+                
+                // Clear existing analytes
+                document.getElementById('urineAnalytes').innerHTML = '';
+                
+                // Add each analyte
+                payloadData.analytes.forEach(analyte => {
+                    addUrineAnalyte();
+                    const entries = document.querySelectorAll('#urineAnalytes .analyte-entry');
+                    const lastEntry = entries[entries.length - 1];
+                    lastEntry.querySelector('.urine-analyte-name').value = analyte.name;
+                    lastEntry.querySelector('.urine-analyte-value').value = analyte.value;
+                    lastEntry.querySelector('.urine-analyte-unit').value = analyte.unit;
+                });
+            }
+        }
+
         // ===== UI HELPERS =====
         
         function switchTab(tabName) {
@@ -1016,6 +1814,268 @@
             
             event.target.classList.add('active');
             document.getElementById(tabName + 'Tab').classList.add('active');
+        }
+        
+        function switchTabByName(tabName) {
+            // Programmatic tab switch without event
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.textContent.includes(tabName === 'upload' ? 'Upload' : 
+                                             tabName === 'manual' ? 'Manual' :
+                                             tabName === 'quality' ? 'Quality' : 'Reports')) {
+                    tab.classList.add('active');
+                }
+            });
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabName + 'Tab').classList.add('active');
+        }
+        
+        let a2PollInterval = null;
+        
+        function pollA2Status(submissionId, initialStatus) {
+            // Clear any existing poll
+            if (a2PollInterval) {
+                clearInterval(a2PollInterval);
+            }
+            
+            // If already completed or failed, just fetch summary
+            if (initialStatus === 'completed') {
+                fetchA2Summary(submissionId);
+                return;
+            }
+            if (initialStatus === 'failed') {
+                fetchA2StatusOnce(submissionId);
+                return;
+            }
+            
+            // Poll status every 2 seconds until completed or failed
+            showStatus('qualityResults', '⏳ A2 processing in progress...', 'info');
+            
+            a2PollInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`${API_BASE}/a2/status?submission_id=${submissionId}`, {
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+                    
+                    if (response.ok) {
+                        const status = await response.json();
+                        const progress = Math.round(status.progress * 100);
+                        
+                        if (status.status === 'running' || status.status === 'queued') {
+                            showStatus('qualityResults', `⏳ A2 ${status.status}: ${progress}%`, 'info');
+                        } else if (status.status === 'completed') {
+                            clearInterval(a2PollInterval);
+                            showStatus('qualityResults', '✅ A2 completed! Loading results...', 'success');
+                            fetchA2Summary(submissionId);
+                        } else if (status.status === 'failed') {
+                            clearInterval(a2PollInterval);
+                            showStatus('qualityResults', 
+                                `❌ A2 failed: ${status.error_message || 'Unknown error'}<br><br>
+                                <button onclick="retryA2Analysis('${submissionId}')">🔄 Retry A2 Analysis</button>`, 
+                                'error');
+                        }
+                    }
+                } catch (error) {
+                    console.error('A2 status poll error:', error);
+                }
+            }, 2000);
+        }
+        
+        async function fetchA2StatusOnce(submissionId) {
+            try {
+                const response = await fetch(`${API_BASE}/a2/status?submission_id=${submissionId}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                if (response.ok) {
+                    const status = await response.json();
+                    if (status.status === 'failed') {
+                        showStatus('qualityResults', 
+                            `❌ A2 failed: ${status.error_message || 'Unknown error'}<br><br>
+                            <button onclick="retryA2Analysis('${submissionId}')">🔄 Retry A2 Analysis</button>`, 
+                            'error');
+                    } else if (status.status === 'completed') {
+                        fetchA2Summary(submissionId);
+                    }
+                }
+            } catch (error) {
+                console.error('A2 status fetch error:', error);
+            }
+        }
+        
+        async function fetchA2Summary(submissionId) {
+            try {
+                const response = await fetch(`${API_BASE}/a2/summary?submission_id=${submissionId}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                if (response.ok) {
+                    const summary = await response.json();
+                    displayA2TruthLayer(summary);
+                } else {
+                    showStatus('qualityResults', '❌ Failed to load A2 summary', 'error');
+                }
+            } catch (error) {
+                showStatus('qualityResults', `❌ Error loading A2 summary: ${error.message}`, 'error');
+            }
+        }
+        
+        function displayA2TruthLayer(summary) {
+            let html = '<div class="section"><h3>✅ A2 Data Quality Analysis Complete</h3>';
+            html += `<p style="color: #666; margin-bottom: 20px;">Created: ${new Date(summary.created_at).toLocaleString()}</p>`;
+            
+            // Stream Coverage
+            html += '<h4>📊 Stream Coverage</h4>';
+            html += '<div class="quality-gates">';
+            const streams = summary.stream_coverage;
+            for (const [name, metrics] of Object.entries(streams)) {
+                const quality = metrics.quality_score;
+                const passClass = quality >= 0.7 ? 'pass' : quality >= 0.4 ? 'warn' : 'fail';
+                html += `
+                    <div class="gate-card ${passClass}">
+                        <h4>${name.charAt(0).toUpperCase() + name.slice(1)}</h4>
+                        <div class="status">${Math.round(quality * 100)}%</div>
+                        <p>Days: ${metrics.days_covered} | Missing: ${Math.round(metrics.missing_rate * 100)}%</p>
+                    </div>
+                `;
+            }
+            html += '</div>';
+            
+            // Gating Status
+            html += '<h4 style="margin-top: 30px;">🚦 Part B Eligibility</h4>';
+            const gating = summary.gating;
+            if (gating.eligible_for_part_b) {
+                html += '<div class="status-message status-success">✅ Eligible for Part B</div>';
+                html += '<div style="margin-top: 20px;"><button onclick="switchTabByName(\'reports\')" style="padding: 15px 40px; font-size: 1.1em; background: #4CAF50;">📊 Generate Part B Report</button></div>';
+            } else {
+                html += '<div class="status-message status-error">❌ Not eligible for Part B</div>';
+            }
+            html += '<ul style="margin-top: 15px;">';
+            gating.reasons.forEach(r => {
+                html += `<li>${r}</li>`;
+            });
+            html += '</ul>';
+            
+            // Anchor Strength
+            html += '<h4 style="margin-top: 30px;">⚓ Anchor Strength by Domain</h4>';
+            html += '<div class="quality-gates">';
+            const anchors = summary.anchor_strength_by_domain;
+            for (const [domain, strength] of Object.entries(anchors)) {
+                const gradeClass = strength.grade === 'A' ? 'pass' : strength.grade === 'B' ? 'warn' : 'fail';
+                html += `
+                    <div class="gate-card ${gradeClass}">
+                        <h4>${domain.charAt(0).toUpperCase() + domain.slice(1)}</h4>
+                        <div class="status">Grade ${strength.grade}</div>
+                        <p>Score: ${Math.round(strength.score * 100)}%</p>
+                    </div>
+                `;
+            }
+            html += '</div>';
+            
+            // Derived Features
+            if (summary.derived_features_count > 0) {
+                html += `<h4 style="margin-top: 30px;">🧮 Derived Features: ${summary.derived_features_count}</h4>`;
+                if (summary.derived_features_detail) {
+                    html += '<ul>';
+                    summary.derived_features_detail.features.forEach(f => {
+                        html += `<li>${f.name}: ${f.value} ${f.unit}</li>`;
+                    });
+                    html += '</ul>';
+                }
+            }
+            
+            // Manual Controls
+            html += `<h4 style="margin-top: 30px;">🔧 Manual Controls</h4>`;
+            html += `<div style="display: flex; gap: 15px; flex-wrap: wrap;">`;
+            html += `<button onclick="runA2Analysis('${summary.submission_id}')">▶️ Re-run A2</button>`;
+            html += `<button onclick="viewA2RunDetails('${summary.submission_id}')">📋 View Run Details</button>`;
+            html += `</div>`;
+            
+            html += '</div>';
+            document.getElementById('qualityResults').innerHTML = html;
+        }
+        
+        async function runA2Analysis(submissionId) {
+            if (!submissionId) {
+                submissionId = document.getElementById('qualitySubmissionId').value || currentSubmissionId;
+            }
+            
+            showStatus('qualityResults', '⏳ Starting A2 analysis...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/a2/run`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ submission_id: submissionId })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showStatus('qualityResults', `✅ A2 started (${data.a2_run_id})`, 'success');
+                    pollA2Status(submissionId, data.status);
+                } else {
+                    const error = await response.json();
+                    showStatus('qualityResults', `❌ Failed to start A2: ${error.detail}`, 'error');
+                }
+            } catch (error) {
+                showStatus('qualityResults', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function retryA2Analysis(submissionId) {
+            showStatus('qualityResults', '⏳ Retrying A2 analysis...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/a2/retry`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ submission_id: submissionId })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showStatus('qualityResults', `✅ A2 retry started (${data.a2_run_id})`, 'success');
+                    pollA2Status(submissionId, data.status);
+                } else {
+                    const error = await response.json();
+                    showStatus('qualityResults', `❌ Retry failed: ${error.detail}`, 'error');
+                }
+            } catch (error) {
+                showStatus('qualityResults', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function viewA2RunDetails(submissionId) {
+            try {
+                const response = await fetch(`${API_BASE}/a2/run-details?submission_id=${submissionId}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                if (response.ok) {
+                    const details = await response.json();
+                    let html = '<div class="section"><h4>📋 A2 Run Details</h4>';
+                    html += `<p><strong>Submission ID:</strong> ${details.submission_id}</p>`;
+                    html += `<p><strong>Total Runs:</strong> ${details.total_runs}</p>`;
+                    html += '<h5>Latest Run:</h5>';
+                    const latest = details.latest_run;
+                    html += `<pre>${JSON.stringify(latest, null, 2)}</pre>`;
+                    html += '<h5>Run History:</h5>';
+                    html += `<pre>${JSON.stringify(details.run_history, null, 2)}</pre>`;
+                    html += '<button onclick="fetchA2Summary(\\'${submissionId}\\')">← Back to Summary</button>';
+                    html += '</div>';
+                    document.getElementById('qualityResults').innerHTML = html;
+                } else {
+                    showStatus('qualityResults', '❌ Failed to load run details', 'error');
+                }
+            } catch (error) {
+                showStatus('qualityResults', `❌ Error: ${error.message}`, 'error');
+            }
         }
         
         function showStatus(elementId, message, type = 'info') {
@@ -1034,15 +2094,30 @@
                 option.classList.add('selected');
                 fields.classList.remove('hidden');
                 
-                // Initialize with one analyte entry
-                if (type === 'blood' && document.getElementById('bloodAnalytes').children.length === 0) {
-                    addBloodAnalyte();
-                } else if (type === 'saliva' && document.getElementById('salivaAnalytes').children.length === 0) {
-                    addSalivaAnalyte();
-                } else if (type === 'sweat' && document.getElementById('sweatAnalytes').children.length === 0) {
-                    addSweatAnalyte();
-                } else if (type === 'urine' && document.getElementById('urineAnalytes').children.length === 0) {
-                    addUrineAnalyte();
+                // Check if Demo Mode is ON
+                const demoMode = document.getElementById('demoMode');
+                const isDemoModeActive = demoMode && demoMode.checked;
+                
+                if (isDemoModeActive) {
+                    // Auto-populate with demo data based on current scenario
+                    const scenario = document.getElementById('demoScenario').value;
+                    const demographics = {
+                        age: document.getElementById('soapAge').value,
+                        sex: document.getElementById('soapSex').value
+                    };
+                    const specimenPayloads = generateDemoSpecimenPayload(scenario, demographics);
+                    populateSpecimenFields(type, specimenPayloads[type]);
+                } else {
+                    // Initialize with one empty analyte entry (manual mode)
+                    if (type === 'blood' && document.getElementById('bloodAnalytes').children.length === 0) {
+                        addBloodAnalyte();
+                    } else if (type === 'saliva' && document.getElementById('salivaAnalytes').children.length === 0) {
+                        addSalivaAnalyte();
+                    } else if (type === 'sweat' && document.getElementById('sweatAnalytes').children.length === 0) {
+                        addSweatAnalyte();
+                    } else if (type === 'urine' && document.getElementById('urineAnalytes').children.length === 0) {
+                        addUrineAnalyte();
+                    }
                 }
             } else {
                 option.classList.remove('selected');
@@ -1293,10 +2368,73 @@
             }
         }
 
+        // ===== IMPROVEMENT 5: VALIDATION FUNCTIONS =====
+        
+        function validateFormData() {
+            const errors = [];
+            
+            // Validate array lengths for ISF data
+            const glucoseStr = document.getElementById('isfGlucose').value;
+            const lactateStr = document.getElementById('isfLactate').value;
+            const timestampsStr = document.getElementById('isfTimestamps').value;
+            
+            if (glucoseStr && lactateStr) {
+                const glucoseCount = glucoseStr.split(',').filter(v => v.trim()).length;
+                const lactateCount = lactateStr.split(',').filter(v => v.trim()).length;
+                
+                if (glucoseCount !== lactateCount) {
+                    errors.push(`Array length mismatch: Glucose has ${glucoseCount} values, Lactate has ${lactateCount} values. They must match.`);
+                }
+                
+                if (timestampsStr) {
+                    const timestampCount = timestampsStr.split(',').filter(v => v.trim()).length;
+                    if (timestampCount !== glucoseCount) {
+                        errors.push(`Timestamp count (${timestampCount}) doesn't match data point count (${glucoseCount}). Leave blank for auto-generation.`);
+                    }
+                }
+            }
+            
+            // Validate vitals array lengths
+            const hrStr = document.getElementById('vitalHR').value;
+            const bpSysStr = document.getElementById('vitalBPSys').value;
+            const bpDiaStr = document.getElementById('vitalBPDia').value;
+            
+            if (hrStr && bpSysStr && bpDiaStr) {
+                const hrCount = hrStr.split(',').filter(v => v.trim()).length;
+                const bpSysCount = bpSysStr.split(',').filter(v => v.trim()).length;
+                const bpDiaCount = bpDiaStr.split(',').filter(v => v.trim()).length;
+                
+                if (hrCount !== bpSysCount || hrCount !== bpDiaCount) {
+                    errors.push(`Vitals array mismatch: HR=${hrCount}, BP Sys=${bpSysCount}, BP Dia=${bpDiaCount}. All should match.`);
+                }
+            }
+            
+            return errors;
+        }
+        
+        function displayValidationErrors(errors) {
+            const warningDiv = document.getElementById('validationWarnings');
+            const listDiv = document.getElementById('validationList');
+            
+            listDiv.innerHTML = errors.map(err => `<li>${err}</li>`).join('');
+            warningDiv.style.display = 'block';
+            
+            // Scroll to warning
+            warningDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
         // ===== MANUAL DATA SUBMISSION =====
         
         async function submitManualData() {
             showStatus('manualStatus', 'ℹ️ Collecting form data...', 'info');
+            
+            // IMPROVEMENT 5: Validate form before submission
+            const validationErrors = validateFormData();
+            if (validationErrors.length > 0) {
+                displayValidationErrors(validationErrors);
+                showStatus('manualStatus', '❌ Please fix validation errors before submitting', 'error');
+                return;
+            }
             
             try {
                 // Build Part A schema
@@ -1359,13 +2497,24 @@
                     document.getElementById('qualitySubmissionId').value = currentSubmissionId;
                     document.getElementById('reportSubmissionId').value = currentSubmissionId;
                     
+                    // Extract A2 status from response
+                    const a2Status = data.a2_status || 'unknown';
+                    const a2RunId = data.a2_run_id || 'N/A';
+                    
                     showStatus('manualStatus', 
-                        `✅ Part A data submitted successfully!<br>
+                        `✅ Part A submitted successfully!<br>
                         <strong>Submission ID:</strong> ${data.submission_id}<br>
-                        <strong>Status:</strong> ${data.status}<br>
-                        <strong>Qualitative encodings applied:</strong> ${data.qualitative_encodings_applied || 0}<br><br>
-                        You can now proceed to Data Quality (A2) or generate Part B reports!`, 
+                        <strong>Qualitative encodings applied:</strong> ${data.qualitative_encodings_applied || 0}<br>
+                        <strong>A2 Status:</strong> ${a2Status}<br><br>
+                        <em>Routing to A2 tab...</em>`, 
                         'success');
+                    
+                    // Auto-route to A2 tab after brief delay
+                    setTimeout(() => {
+                        switchTabByName('quality');
+                        // Start polling A2 status
+                        pollA2Status(data.submission_id, a2Status);
+                    }, 1500);
                 } else {
                     showStatus('manualStatus', `❌ Submission failed: ${JSON.stringify(data, null, 2)}`, 'error');
                 }
@@ -1537,22 +2686,74 @@
                 electrolytes: [],
                 renal_metabolic: [],
                 inflammation_oxidative: [],
-                signal_quality: {
-                    calibration_status: document.getElementById('isfCalibration').value,
-                    sensor_drift_score: parseFloat(document.getElementById('isfDrift').value) || 0.1,
-                    noise_score: parseFloat(document.getElementById('isfNoise').value) || 0.05,
-                    dropout_percentage: parseFloat(document.getElementById('isfDropout').value) || 2.0
-                }
+                signal_quality: mapSignalQualityToBackend()
+            };
+        }
+        
+        // IMPROVEMENT 3: Map simplified signal quality to backend format
+        function mapSignalQualityToBackend() {
+            const qualityBand = document.getElementById('signalQualityBand').value;
+            const dropFreq = document.getElementById('signalDropFrequency').value;
+            const stability = document.getElementById('readingStability').value;
+            const lastCal = document.getElementById('lastCalibration').value;
+            
+            // Map quality band to scores
+            const qualityMap = {
+                'excellent': { drift: 0.02, noise: 0.01, dropout: 0.5 },
+                'good': { drift: 0.05, noise: 0.03, dropout: 1.5 },
+                'fair': { drift: 0.15, noise: 0.08, dropout: 5.0 },
+                'poor': { drift: 0.30, noise: 0.15, dropout: 10.0 }
+            };
+            
+            // Map drop frequency to dropout percentage
+            const dropoutMap = {
+                'never': 0.5,
+                'rare': 2.0,
+                'sometimes': 5.0,
+                'often': 12.0
+            };
+            
+            // Map stability to noise score
+            const noiseMap = {
+                'very_stable': 0.02,
+                'mostly_stable': 0.05,
+                'somewhat_jumpy': 0.12,
+                'very_jumpy': 0.25
+            };
+            
+            // Map calibration to status
+            const calStatusMap = {
+                'today': 'recent',
+                'lt3days': 'recent',
+                '1week': 'due',
+                'gt1week': 'overdue',
+                'never': 'overdue'
+            };
+            
+            const base = qualityMap[qualityBand] || qualityMap['good'];
+            
+            return {
+                calibration_status: calStatusMap[lastCal] || 'recent',
+                sensor_drift_score: base.drift,
+                noise_score: noiseMap[stability] || base.noise,
+                dropout_percentage: dropoutMap[dropFreq] || base.dropout
             };
         }
         
         function collectVitalsData() {
             const parseArray = (str) => str ? str.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v)) : [];
             
+            // IMPROVEMENT 4: Handle HRV based on wearable toggle
+            let hrvData = [];
+            if (document.getElementById('hasWearable').checked) {
+                hrvData = parseArray(document.getElementById('vitalHRV').value);
+            }
+            // If no wearable, recovery proxies are collected separately in SOAP
+            
             return {
                 cardiovascular: {
                     heart_rate_resting: parseArray(document.getElementById('vitalHR').value),
-                    hrv_rmssd: parseArray(document.getElementById('vitalHRV').value),
+                    hrv_rmssd: hrvData,
                     blood_pressure_systolic: parseArray(document.getElementById('vitalBPSys').value),
                     blood_pressure_diastolic: parseArray(document.getElementById('vitalBPDia').value)
                 },
@@ -1579,16 +2780,44 @@
             if (document.getElementById('condCKD').checked) conditions.push('ckd');
             if (document.getElementById('condThyroid').checked) conditions.push('thyroid_disease');
             
-            return {
+            // IMPROVEMENT 2: Collect family history from multi-select
+            const familyHistory = [];
+            const familyHistorySelect = document.getElementById('familyHistory');
+            if (familyHistorySelect) {
+                for (let option of familyHistorySelect.selectedOptions) {
+                    familyHistory.push(option.value);
+                }
+            }
+            
+            // IMPROVEMENT 4: Collect recovery proxies if no wearable
+            const hasWearable = document.getElementById('hasWearable').checked;
+            const recoveryProxies = {};
+            if (!hasWearable) {
+                const perceivedRecovery = document.getElementById('perceivedRecovery').value;
+                const sorenessLevel = document.getElementById('sorenessLevel').value;
+                const trainingIntensity = document.getElementById('trainingIntensityYesterday').value;
+                if (perceivedRecovery) recoveryProxies.perceived_recovery = parseInt(perceivedRecovery);
+                if (sorenessLevel) recoveryProxies.soreness_level = parseInt(sorenessLevel);
+                if (trainingIntensity) recoveryProxies.training_intensity_yesterday = trainingIntensity;
+            }
+            
+            const baseProfile = {
                 demographics_anthropometrics: {
                     age: parseInt(document.getElementById('soapAge').value) || 30,
                     sex_at_birth: document.getElementById('soapSex').value || 'male',
                     height_cm: parseFloat(document.getElementById('soapHeight').value) || 170,
-                    weight_kg: parseFloat(document.getElementById('soapWeight').value) || 70
+                    weight_kg: parseFloat(document.getElementById('soapWeight').value) || 70,
+                    // IMPROVEMENT 2: Optional identity context
+                    race_ethnicity: document.getElementById('raceEthnicity')?.value ? [document.getElementById('raceEthnicity').value] : [],
+                    climate_exposure: document.getElementById('climateExposure')?.value || null,
+                    work_schedule: document.getElementById('workSchedule')?.value || null
                 },
                 medical_history: {
                     conditions: conditions,
-                    family_history: []
+                    family_history: familyHistory,
+                    // IMPROVEMENT 2: Optional medical details
+                    current_medications: document.getElementById('currentMedications')?.value || null,
+                    supplements_vitamins: document.getElementById('supplementsVitamins')?.value || null
                 },
                 medications_supplements: {
                     medications: [],
@@ -1606,13 +2835,30 @@
                     activity_level: document.getElementById('activityLevel').value,
                     shift_work: false,
                     sleep_schedule_consistency: document.getElementById('sleepSchedule').value,
-                    nicotine_tobacco: document.getElementById('nicotine').value
+                    nicotine_tobacco: document.getElementById('nicotine').value,
+                    // IMPROVEMENT 2: Optional lifestyle details
+                    smoking_vaping: document.getElementById('smokingVaping')?.value || null,
+                    exercise_type: document.getElementById('exerciseType')?.value || null,
+                    recent_training_change: document.getElementById('recentTrainingChange')?.value || null
                 },
                 symptoms: {
                     free_text: document.getElementById('symptomsFreeText').value || null,
                     structured: []
+                },
+                // IMPROVEMENT 2: Optional stress/mental health context
+                stress_mental_health: {
+                    stress_level: document.getElementById('stressLevel')?.value ? parseInt(document.getElementById('stressLevel').value) : null,
+                    mood_state: document.getElementById('moodState')?.value || null,
+                    sleep_disruption_cause: document.getElementById('sleepDisruptionCause')?.value || null
                 }
             };
+            
+            // IMPROVEMENT 4: Add recovery proxies if present
+            if (Object.keys(recoveryProxies).length > 0) {
+                baseProfile.recovery_proxies = recoveryProxies;
+            }
+            
+            return baseProfile;
         }
 
         // ===== DATA QUALITY (A2) =====
@@ -1626,38 +2872,62 @@
             }
             
             try {
-                const response = await fetch(`${API_BASE}/data-quality/completeness/${submissionId}`, {
+                const response = await fetch(`${API_BASE}/a2/completeness/${submissionId}`, {
                     headers: { 'Authorization': `Bearer ${authToken}` }
                 });
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        showStatus('qualityResults', 'ℹ️ A2 not run yet for this submission. Use "Run A2 Analysis" button.', 'info');
+                        return;
+                    }
+                    const data = await response.json();
+                    showStatus('qualityResults', `❌ ${data.detail || 'Check failed'}`, 'error');
+                    return;
+                }
                 
                 const data = await response.json();
                 
                 if (response.ok) {
-                    let html = '<div class="section"><h4>✅ Completeness Check Results</h4>';
+                    let html = '<div class="section"><h4>✅ Data Completeness Analysis</h4>';
+                    html += '<p style="margin-bottom: 15px; color: #666; font-size: 14px;">Shows which data sources are present. More data sources = higher confidence predictions.</p>';
                     html += `<div class="quality-gates">`;
                     
                     html += `
                         <div class="gate-card ${data.has_isf_monitor ? 'pass' : 'fail'}">
                             <h4>ISF Monitor</h4>
                             <div class="status">${data.has_isf_monitor ? '✅' : '❌'}</div>
+                            <p style="font-size: 12px; color: #666; margin-top: 5px;">
+                                ${data.has_isf_monitor ? 'Continuous tracking enables real-time pattern detection' : 'No continuous data - predictions rely on snapshots'}
+                            </p>
                         </div>
                         <div class="gate-card ${data.has_specimens ? 'pass' : 'fail'}">
-                            <h4>Specimens</h4>
+                            <h4>Lab Specimens</h4>
                             <div class="status">${data.has_specimens ? '✅' : '❌'}</div>
                             <p>${data.specimen_count || 0} uploads</p>
+                            <p style="font-size: 12px; color: #666; margin-top: 5px;">
+                                ${data.has_specimens ? 'Direct biomarker measurements increase prediction accuracy' : 'No lab data - predictions less precise'}
+                            </p>
                         </div>
                         <div class="gate-card ${data.has_vitals ? 'pass' : 'fail'}">
                             <h4>Vitals</h4>
                             <div class="status">${data.has_vitals ? '✅' : '❌'}</div>
+                            <p style="font-size: 12px; color: #666; margin-top: 5px;">
+                                ${data.has_vitals ? 'Physiological context improves interpretation' : 'Missing vitals - limited context for biomarkers'}
+                            </p>
                         </div>
                         <div class="gate-card ${data.has_soap ? 'pass' : 'fail'}">
-                            <h4>SOAP Profile</h4>
+                            <h4>Clinical Profile</h4>
                             <div class="status">${data.has_soap ? '✅' : '❌'}</div>
+                            <p style="font-size: 12px; color: #666; margin-top: 5px;">
+                                ${data.has_soap ? 'Lifestyle and medical history enable personalized insights' : 'No profile - predictions use population averages'}
+                            </p>
                         </div>
                     `;
                     
                     html += '</div>';
-                    html += `<p style="margin-top: 20px;"><strong>Completeness Score:</strong> ${(data.completeness_score * 100).toFixed(1)}%</p>`;
+                    html += `<p style="margin-top: 20px;"><strong>Overall Completeness:</strong> ${(data.completeness_score * 100).toFixed(1)}%</p>`;
+                    html += `<p style="font-size: 13px; color: #666;">Higher completeness scores improve prediction confidence and enable more personalized recommendations.</p>`;
                     html += '</div>';
                     
                     document.getElementById('qualityResults').innerHTML = html;
@@ -1668,6 +2938,9 @@
                 showStatus('qualityResults', `❌ Error: ${error.message}`, 'error');
             }
         }
+        
+        // Alias for auto-run
+        const runCompletenessCheck = checkCompleteness;
         
         async function checkGatingStatus() {
             const submissionId = document.getElementById('qualitySubmissionId').value || currentSubmissionId;
@@ -1682,28 +2955,48 @@
                     headers: { 'Authorization': `Bearer ${authToken}` }
                 });
                 
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        showStatus('qualityResults', 'ℹ️ Gating status not available for this submission', 'info');
+                        return;
+                    }
+                    const data = await response.json();
+                    showStatus('qualityResults', `❌ ${data.detail || 'Check failed'}`, 'error');
+                    return;
+                }
+                
                 const data = await response.json();
                 
                 if (response.ok) {
-                    let html = '<div class="section"><h4>🚪 Gating Status</h4>';
+                    let html = '<div class="section"><h4>🚪 Data Quality Gates</h4>';
+                    html += '<p style="margin-bottom: 15px; color: #666; font-size: 14px;">Quality gates ensure your data meets minimum requirements for reliable predictions.</p>';
                     html += `<div class="status-message status-${data.eligible_for_inference ? 'success' : 'warning'}">`;
-                    html += `<strong>Eligible for Inference:</strong> ${data.eligible_for_inference ? '✅ YES' : '❌ NO'}`;
+                    html += `<strong>Ready for Part B Analysis:</strong> ${data.eligible_for_inference ? '✅ YES - All quality checks passed' : '❌ NO - Missing required data'}`;
                     html += '</div>';
                     
                     if (data.gates_passed) {
-                        html += '<h5 style="margin-top: 20px;">Gates Status:</h5><ul>';
+                        html += '<h5 style="margin-top: 20px;">Quality Gate Status:</h5><ul>';
                         for (const [gate, passed] of Object.entries(data.gates_passed)) {
-                            html += `<li>${gate}: ${passed ? '✅ PASS' : '❌ FAIL'}</li>`;
+                            const gateExplanations = {
+                                'minimum_data': 'Basic data requirements met',
+                                'temporal_consistency': 'Timestamps are valid and logical',
+                                'value_ranges': 'Measurements within physiologically plausible ranges',
+                                'specimen_integrity': 'Lab results meet quality standards',
+                                'isf_continuity': 'ISF monitor data is continuous without large gaps'
+                            };
+                            const explanation = gateExplanations[gate] || gate;
+                            html += `<li><strong>${gate}:</strong> ${passed ? '✅ PASS' : '❌ FAIL'} - ${explanation}</li>`;
                         }
                         html += '</ul>';
                     }
                     
                     if (data.blocking_issues && data.blocking_issues.length > 0) {
-                        html += '<h5 style="margin-top: 20px; color: #dc3545;">Blocking Issues:</h5><ul>';
+                        html += '<h5 style="margin-top: 20px; color: #dc3545;">⚠️ Issues to Resolve:</h5><ul style="color: #dc3545;">';
                         data.blocking_issues.forEach(issue => {
                             html += `<li>${issue}</li>`;
                         });
                         html += '</ul>';
+                        html += '<p style="margin-top: 10px; font-size: 13px; color: #666;">Fix these issues to enable Part B analysis.</p>';
                     }
                     
                     html += '</div>';
@@ -1716,11 +3009,24 @@
             }
         }
         
+        // Alias for auto-run
+        const runGatingStatusCheck = checkGatingStatus;
+        
         async function checkPriorsExample() {
             try {
                 const response = await fetch(`${API_BASE}/data-quality/priors/glucose`, {
                     headers: { 'Authorization': `Bearer ${authToken}` }
                 });
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        showStatus('qualityResults', 'ℹ️ Prior data not available', 'info');
+                        return;
+                    }
+                    const data = await response.json();
+                    showStatus('qualityResults', `❌ ${data.detail || 'Check failed'}`, 'error');
+                    return;
+                }
                 
                 const data = await response.json();
                 
@@ -1791,8 +3097,158 @@
         }
         
         function displayPartBReport(data) {
-            let html = '<div class="section"><h3>📊 Part B Report: 35 Outputs</h3>';
+            console.log('Part B Report Data:', data);
+            let html = '<div class="section">';
             
+            // Header with export buttons
+            html += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3>📊 Part B Report: ${data.total_outputs || 35} Outputs</h3>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="exportPartBJSON()" class="btn-add" style="padding: 8px 16px;">📥 Export JSON</button>
+                    <button onclick="exportPartBPDF()" class="btn-add" style="padding: 8px 16px;">📄 Export PDF</button>
+                </div>
+            </div>`;
+            
+            // Report metadata
+            if (data.report_id) {
+                html += `<div style="background: #f0f8ff; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                    <strong>Report ID:</strong> ${data.report_id}<br>
+                    <strong>Generated:</strong> ${new Date(data.report_generated_at || Date.now()).toLocaleString()}<br>
+                    <strong>Average Confidence:</strong> ${(data.average_confidence || 0).toFixed(1)}%<br>
+                    <strong>Successful Outputs:</strong> ${data.successful_outputs || 0} / ${data.total_outputs || 0}
+                </div>`;
+            }
+            
+            // Check for new panel structure (metabolic_regulation, lipid_cardiometabolic, etc.)
+            const panels = [
+                { key: 'metabolic_regulation', title: 'Panel 1: Metabolic Regulation' },
+                { key: 'lipid_cardiometabolic', title: 'Panel 2: Lipid & Cardiometabolic' },
+                { key: 'micronutrient_vitamin', title: 'Panel 3: Micronutrient & Vitamin' },
+                { key: 'inflammatory_immune', title: 'Panel 4: Inflammatory & Immune' },
+                { key: 'endocrine_neurohormonal', title: 'Panel 5: Endocrine & Neurohormonal' },
+                { key: 'renal_hydration', title: 'Panel 6: Renal & Hydration' },
+                { key: 'comprehensive_integrated', title: 'Panel 7: Comprehensive Integrated' }
+            ];
+            
+            let hasNewStructure = panels.some(p => data[p.key]);
+            
+            if (hasNewStructure) {
+                // New panel structure
+                panels.forEach(panel => {
+                    const panelData = data[panel.key];
+                    if (panelData && panelData.outputs && panelData.outputs.length > 0) {
+                        html += `<div class="report-panel">
+                            <h4>${panel.title}</h4>
+                            <p style="color: #666; margin-bottom: 15px;">${panelData.summary_notes || ''}</p>`;
+                        
+                        panelData.outputs.forEach(output => {
+                            html += `<div class="output-item" style="margin-bottom: 20px; padding: 15px; background: #fafafa; border-left: 3px solid #007bff; border-radius: 3px;">
+                                <h5 style="margin: 0 0 10px 0; color: #333;">${output.metric_name.replace(/_/g, ' ').toUpperCase()}</h5>`;
+                            
+                            if (output.value_range_low !== undefined && output.value_range_high !== undefined) {
+                                html += `<div style="font-size: 18px; font-weight: bold; color: #007bff; margin: 5px 0;">
+                                    ${output.value_range_low} - ${output.value_range_high} ${output.units || ''}</div>`;
+                            }
+                            
+                            html += `<div style="margin: 10px 0;">
+                                <span style="padding: 4px 8px; background: ${output.confidence_percent >= 75 ? '#d4edda' : output.confidence_percent >= 50 ? '#fff3cd' : '#f8d7da'}; 
+                                      border-radius: 3px; font-size: 13px; font-weight: 600;">
+                                    ${output.measured_vs_inferred} | Confidence: ${(output.confidence_percent || 0).toFixed(1)}%
+                                </span>
+                            </div>`;
+                            
+                            if (output.confidence_top_3_drivers && output.confidence_top_3_drivers.length > 0) {
+                                html += '<div style="margin: 10px 0;"><strong>Top Drivers:</strong><ul style="margin: 5px 0;">';
+                                output.confidence_top_3_drivers.forEach(([driver, impact]) => {
+                                    html += `<li>${driver} (${impact})</li>`;
+                                });
+                                html += '</ul></div>';
+                            }
+                            
+                            if (output.safe_action_suggestion) {
+                                html += `<div style="margin: 10px 0; padding: 10px; background: #e7f3ff; border-radius: 3px;">
+                                    <strong>💡 Suggestion:</strong> ${output.safe_action_suggestion}</div>`;
+                            }
+                            
+                            if (output.methodologies_used && output.methodologies_used.length > 0) {
+                                html += '<div style="margin: 10px 0; font-size: 12px; color: #666;"><strong>Methods:</strong> ';
+                                html += output.methodologies_used.slice(0, 4).join(', ');
+                                html += '</div>';
+                            }
+                            
+                            html += '</div>';
+                        });
+                        
+                        html += '</div>';
+                    }
+                });
+            } else {
+                // Fallback: show raw JSON if structure doesn't match
+                html += '<div class="info-message">⚠️ Report format doesn\'t match expected structure. Showing raw data:</div>';
+                html += `<pre style="background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; max-height: 600px;">${JSON.stringify(data, null, 2)}</pre>`;
+            }
+            
+            html += '</div>';
+            document.getElementById('reportResults').innerHTML = html;
+        }
+        
+        function exportPartBJSON() {
+            const submissionId = document.getElementById('reportSubmissionId').value || currentSubmissionId;
+            if (!submissionId) {
+                alert('No submission ID available for export');
+                return;
+            }
+            
+            // Get the current report data
+            fetch(`${API_BASE}/part-b/report/${submissionId}`, {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            })
+            .then(res => res.json())
+            .then(data => {
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `partb_report_${submissionId}_${new Date().toISOString().slice(0,10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            })
+            .catch(err => alert('Export failed: ' + err.message));
+        }
+        
+        function exportPartBPDF() {
+            const submissionId = document.getElementById('reportSubmissionId').value || currentSubmissionId;
+            if (!submissionId) {
+                alert('No submission ID available for export');
+                return;
+            }
+            
+            showStatus('reportStatus', 'ℹ️ Generating PDF... This may take a moment.', 'info');
+            
+            fetch(`${API_BASE}/part-b/export-pdf/${submissionId}`, {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('PDF generation failed');
+                return res.blob();
+            })
+            .then(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `partb_report_${submissionId}_${new Date().toISOString().slice(0,10)}.pdf`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showStatus('reportStatus', '✅ PDF exported successfully!', 'success');
+            })
+            .catch(err => {
+                showStatus('reportStatus', `❌ PDF export failed: ${err.message}`, 'error');
+            });
+        }
+        
+        // Old panel display code (keep for backwards compatibility)
+        function displayLegacyPanels(data) {
+            let html = '';
             // Panel 1: Physiologic State
             if (data.panel_1_physiologic_state) {
                 html += '<div class="report-panel">';
