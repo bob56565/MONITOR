@@ -1168,7 +1168,7 @@
 
         // ===== AUTHENTICATION =====
         
-        async function signup() {
+        window.signup = async function signup() {
             const email = document.getElementById('authEmail').value;
             const password = document.getElementById('authPassword').value;
             
@@ -1201,7 +1201,7 @@
             }
         }
         
-        async function login() {
+        window.login = async function login() {
             const email = document.getElementById('authEmail').value;
             const password = document.getElementById('authPassword').value;
             
@@ -1241,7 +1241,7 @@
             }
         }
         
-        function logout() {
+        window.logout = function logout() {
             authToken = null;
             localStorage.removeItem('authToken');
             document.getElementById('authSection').style.display = 'block';
@@ -1251,7 +1251,7 @@
 
         // ===== IMPROVEMENT 1: DEMO MODE FUNCTIONS =====
         
-        function generateDemoPatient() {
+        window.generateDemoPatient = function generateDemoPatient() {
             const scenario = document.getElementById('demoScenario').value;
             const cadence = parseInt(document.getElementById('demoCadence').value);
             const dataPoints = parseInt(document.getElementById('demoDataPoints').value);
@@ -1300,7 +1300,7 @@
             generateDemoPatient();
         }
         
-        function resetForm() {
+        window.resetForm = function resetForm() {
             if (confirm('Clear all form fields?')) {
                 // Clear all inputs
                 document.querySelectorAll('#manualTab input[type="text"], #manualTab input[type="number"], #manualTab textarea').forEach(el => el.value = '');
@@ -2129,7 +2129,7 @@
         
         let analyteCounter = 0;
         
-        function addBloodAnalyte() {
+        window.addBloodAnalyte = function addBloodAnalyte() {
             const container = document.getElementById('bloodAnalytes');
             const id = ++analyteCounter;
             const html = `
@@ -3413,6 +3413,23 @@
                 return v.toString(16);
             });
         }
+        
+        // Explicitly make all onclick functions globally accessible
+        window.randomizeDemoPatient = randomizeDemoPatient;
+        window.switchTab = switchTab;
+        window.toggleSpecimen = toggleSpecimen;
+        window.addBloodAnalyte = addBloodAnalyte;
+        window.addSalivaAnalyte = addSalivaAnalyte;
+        window.addSweatAnalyte = addSweatAnalyte;
+        window.addUrineAnalyte = addUrineAnalyte;
+        window.removeAnalyte = removeAnalyte;
+        window.handleDragOver = handleDragOver;
+        window.handleDragLeave = handleDragLeave;
+        window.handleFileDrop = handleFileDrop;
+        window.handleFileSelect = handleFileSelect;
+        window.submitFileData = submitFileData;
+        window.submitManualData = submitManualData;
+        window.generatePartBReport = generatePartBReport;
     </script>
 </body>
 </html>
