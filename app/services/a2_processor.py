@@ -218,10 +218,16 @@ class A2Processor:
             VitalsRecord.submission_id == submission.id
         ).all()
         if vitals:
-            timestamps = [v.timestamp for v in vitals if v.timestamp]
-            if timestamps:
-                days_covered = (max(timestamps) - min(timestamps)).days + 1
-                last_seen = max(timestamps)
+            # VitalsRecord doesn't have timestamp field, use created_at or skip temporal analysis
+            all_timestamps = []
+            for v in vitals:
+                if v.created_at:
+                    all_timestamps.append(v.created_at)
+                # Could also extract timestamps from JSON data if present
+                
+            if all_timestamps:
+                days_covered = (max(all_timestamps) - min(all_timestamps)).days + 1
+                last_seen = max(all_timestamps)
                 # Vitals: at least 1 per day is good quality
                 expected_readings = days_covered
                 actual_readings = len(vitals)
