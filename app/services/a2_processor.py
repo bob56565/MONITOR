@@ -323,11 +323,14 @@ class A2Processor:
         reasons = []
         eligible = True
         
-        # Check glucose coverage (minimum 7 days)
+        # Check glucose coverage (minimum 1 day for demo, 7 days ideal)
         glucose_days = stream_coverage["glucose"]["days_covered"]
-        if glucose_days < 7:
+        if glucose_days < 1:
             eligible = False
-            reasons.append(f"Insufficient glucose monitoring ({glucose_days} days, need 7+)")
+            reasons.append(f"Insufficient glucose monitoring ({glucose_days} days, need 1+)")
+        elif glucose_days < 7:
+            reasons.append(f"Limited glucose monitoring ({glucose_days} days, 7+ recommended for tighter estimates)")
+            # Not blocking, just a warning
         
         # Check lab anchors
         specimens = db.query(SpecimenUpload).filter(
