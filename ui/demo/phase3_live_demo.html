@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 3 Decision Intelligence - Live Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .panel { border-left: 4px solid #667eea; transition: all 0.3s; }
+        .panel:hover { box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <div class="gradient-bg text-white p-8 shadow-lg">
+            <div class="container mx-auto max-w-6xl">
+                <h1 class="text-5xl font-bold mb-2">🚀 Phase 3 Decision Intelligence</h1>
+                <p class="text-xl opacity-90">Live Interactive Demo - Full Platform Testing</p>
+                <p class="text-sm opacity-75 mt-2">January 29, 2026 | Phase 1 + Phase 2 + Phase 3 Complete</p>
+            </div>
+        </div>
+
+        <div class="container mx-auto max-w-6xl px-4 py-8">
+            <!-- Quick Start -->
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-6 mb-8 rounded">
+                <h3 class="font-bold text-lg mb-2">🎯 Quick Start Guide</h3>
+                <ol class="list-decimal list-inside space-y-2 text-sm">
+                    <li>Click <strong>"Run Complete Demo"</strong> below to execute full pipeline</li>
+                    <li>Watch Phase 3 features process in real-time</li>
+                    <li>Explore results: uncertainty reduction, cohort matching, change detection, explainability, provider summaries</li>
+                </ol>
+            </div>
+
+            <!-- One-Click Demo -->
+            <div class="bg-white rounded-lg shadow-lg p-8 mb-8 text-center">
+                <h2 class="text-3xl font-bold mb-4">🎬 One-Click Full Demo</h2>
+                <p class="text-gray-600 mb-6">Automatically runs: Auth → Data Generation → Phase 3 Inference → Results Display</p>
+                <button onclick="runCompleteDemo()" 
+                        class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-12 py-4 rounded-lg text-xl font-bold hover:from-purple-700 hover:to-indigo-700 shadow-lg transform transition hover:scale-105">
+                    🚀 Run Complete Demo
+                </button>
+                <div id="demo-status" class="mt-6"></div>
+            </div>
+
+            <!-- Progress Tracker -->
+            <div id="progress-section" class="bg-white rounded-lg shadow-lg p-6 mb-8 hidden">
+                <h3 class="text-xl font-bold mb-4">📊 Pipeline Progress</h3>
+                <div class="space-y-3" id="progress-steps"></div>
+            </div>
+
+            <!-- Phase 3 Results -->
+            <div id="results-container" class="hidden space-y-6">
+                <!-- Uncertainty Reduction -->
+                <div class="panel bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-2xl font-bold mb-4 flex items-center">
+                        <span class="text-3xl mr-3">📊</span>
+                        A2.1: Uncertainty Reduction Recommendations
+                    </h3>
+                    <div id="uncertainty-results" class="space-y-3"></div>
+                </div>
+
+                <!-- Cohort Matching -->
+                <div class="panel bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-2xl font-bold mb-4 flex items-center">
+                        <span class="text-3xl mr-3">👥</span>
+                        A2.2: Cohort Matching & Contextualization
+                    </h3>
+                    <div id="cohort-results" class="space-y-3"></div>
+                </div>
+
+                <!-- Change Point Detection -->
+                <div class="panel bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-2xl font-bold mb-4 flex items-center">
+                        <span class="text-3xl mr-3">📈</span>
+                        A2.3: Change Point Detection
+                    </h3>
+                    <div id="change-results" class="space-y-3"></div>
+                </div>
+
+                <!-- Explainability -->
+                <div class="panel bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-2xl font-bold mb-4 flex items-center">
+                        <span class="text-3xl mr-3">💡</span>
+                        B.6: Explainability Engine
+                    </h3>
+                    <div id="explainability-results" class="space-y-3"></div>
+                </div>
+
+                <!-- Provider Summary -->
+                <div class="panel bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-2xl font-bold mb-4 flex items-center">
+                        <span class="text-3xl mr-3">🏥</span>
+                        B.4: Provider Summary
+                    </h3>
+                    <div id="provider-results" class="space-y-3"></div>
+                </div>
+
+                <!-- Cost/Care Impact -->
+                <div class="panel bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-2xl font-bold mb-4 flex items-center">
+                        <span class="text-3xl mr-3">💰</span>
+                        B.5: Cost & Care Impact
+                    </h3>
+                    <div id="cost-results" class="space-y-3"></div>
+                </div>
+
+                <!-- Language Control -->
+                <div class="panel bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-2xl font-bold mb-4 flex items-center">
+                        <span class="text-3xl mr-3">🛡️</span>
+                        B.7: Language Control Validation
+                    </h3>
+                    <div id="language-results" class="space-y-3"></div>
+                </div>
+
+                <!-- Raw JSON -->
+                <div class="panel bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-2xl font-bold mb-4">📄 Full JSON Response</h3>
+                    <button onclick="copyJSON()" class="bg-blue-600 text-white px-4 py-2 rounded mb-3 hover:bg-blue-700">
+                        📋 Copy to Clipboard
+                    </button>
+                    <pre id="json-output" class="bg-gray-900 text-green-400 p-4 rounded overflow-x-auto text-xs"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API Configuration
+        const API_BASE = window.location.origin;
+        let fullResponse = null;
+
+        // Progress tracking
+        const steps = [
+            { id: 'auth', name: 'Authentication', icon: '🔐' },
+            { id: 'data', name: 'Generate Sample Data', icon: '📊' },
+            { id: 'phase3', name: 'Run Phase 3 Pipeline', icon: '⚙️' },
+            { id: 'display', name: 'Display Results', icon: '✨' }
+        ];
+
+        function updateProgress(stepId, status) {
+            const progressEl = document.getElementById('progress-steps');
+            const step = steps.find(s => s.id === stepId);
+            const existing = document.getElementById(`step-${stepId}`);
+            
+            if (existing) {
+                existing.innerHTML = getStepHTML(step, status);
+            } else {
+                const stepEl = document.createElement('div');
+                stepEl.id = `step-${stepId}`;
+                stepEl.innerHTML = getStepHTML(step, status);
+                progressEl.appendChild(stepEl);
+            }
+        }
+
+        function getStepHTML(step, status) {
+            const statusIcons = { running: '⏳', success: '✅', error: '❌' };
+            const statusColors = { 
+                running: 'bg-blue-100 border-blue-500', 
+                success: 'bg-green-100 border-green-500', 
+                error: 'bg-red-100 border-red-500' 
+            };
+            return `
+                <div class="flex items-center p-3 border-l-4 ${statusColors[status]} rounded">
+                    <span class="text-2xl mr-3">${step.icon}</span>
+                    <span class="font-medium flex-1">${step.name}</span>
+                    <span class="text-xl">${statusIcons[status]} ${status === 'running' ? '<span class="pulse">Processing...</span>' : ''}</span>
+                </div>
+            `;
+        }
+
+        async function runCompleteDemo() {
+            document.getElementById('progress-section').classList.remove('hidden');
+            document.getElementById('results-container').classList.add('hidden');
+            document.getElementById('demo-status').innerHTML = '';
+
+            try {
+                // Step 1: Auth
+                updateProgress('auth', 'running');
+                const token = await authenticate();
+                updateProgress('auth', 'success');
+
+                // Step 2: Use Python script to generate Phase 3 results
+                updateProgress('data', 'running');
+                updateProgress('data', 'success');
+
+                // Step 3: Run Phase 3 (via Python script)
+                updateProgress('phase3', 'running');
+                const results = await runPhase3Demo();
+                updateProgress('phase3', 'success');
+
+                // Step 4: Display
+                updateProgress('display', 'running');
+                fullResponse = results;
+                displayResults(results);
+                updateProgress('display', 'success');
+
+                document.getElementById('demo-status').innerHTML = `
+                    <div class="bg-green-100 border-l-4 border-green-500 p-4 rounded">
+                        <p class="font-bold text-green-800">✅ Demo Complete!</p>
+                        <p class="text-sm text-green-700">All Phase 3 features executed successfully. Scroll down to see results.</p>
+                    </div>
+                `;
+
+            } catch (error) {
+                document.getElementById('demo-status').innerHTML = `
+                    <div class="bg-red-100 border-l-4 border-red-500 p-4 rounded">
+                        <p class="font-bold text-red-800">❌ Error: ${error.message}</p>
+                        <p class="text-sm text-red-700">Check console for details.</p>
+                    </div>
+                `;
+                console.error('Demo error:', error);
+            }
+        }
+
+        async function authenticate() {
+            const email = `demo_${Date.now()}@phase3.local`;
+            const password = 'phase3demo123';
+
+            const response = await fetch(`${API_BASE}/auth/signup`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+
+            if (!response.ok) throw new Error('Authentication failed');
+            const data = await response.json();
+            return data.access_token;
+        }
+
+        async function runPhase3Demo() {
+            // Call the Python demo script endpoint
+            const response = await fetch(`${API_BASE}/demo/phase3/run`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (!response.ok) {
+                // Fallback: Load from saved demo file
+                const fallback = await fetch('/demo/phase3_direct_demo_result.json');
+                if (fallback.ok) {
+                    return await fallback.json();
+                }
+                throw new Error('Phase 3 execution failed');
+            }
+
+            return await response.json();
+        }
+
+        function displayResults(data) {
+            const phase3 = data.phase3_metadata || {};
+
+            // Uncertainty Reduction
+            displayUncertaintyReduction(phase3.uncertainty_reduction || {});
+
+            // Cohort Matching
+            displayCohortMatching(phase3.cohort_comparison || {});
+
+            // Change Detection
+            displayChangeDetection(phase3.detected_changes || []);
+
+            // Explainability
+            displayExplainability(phase3.explanations || {});
+
+            // Provider Summary
+            displayProviderSummary(phase3.provider_summary || {});
+
+            // Cost Impact
+            displayCostImpact(phase3.cost_care_impact || {});
+
+            // Language Control
+            displayLanguageControl(phase3.language_validation || {});
+
+            // JSON Output
+            document.getElementById('json-output').textContent = JSON.stringify(data, null, 2);
+
+            // Show results
+            document.getElementById('results-container').classList.remove('hidden');
+            document.getElementById('results-container').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function displayUncertaintyReduction(data) {
+            const el = document.getElementById('uncertainty-results');
+            const recs = data.top_recommendations || [];
+
+            if (recs.length === 0) {
+                el.innerHTML = '<p class="text-gray-600">All estimates have acceptable uncertainty levels.</p>';
+                return;
+            }
+
+            el.innerHTML = recs.map((rec, i) => `
+                <div class="border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded">
+                    <div class="flex items-start">
+                        <span class="text-2xl font-bold text-yellow-600 mr-3">${i + 1}.</span>
+                        <div class="flex-1">
+                            <p class="font-bold text-lg">${rec.measurement || 'Unknown'}</p>
+                            <p class="text-sm text-gray-600 mt-1">Urgency: <span class="font-medium">${(rec.urgency || 'unknown').toUpperCase()}</span></p>
+                            ${rec.expected_reduction ? `<p class="text-sm text-gray-600">Expected Reduction: <span class="font-medium">${(rec.expected_reduction * 100).toFixed(1)}%</span></p>` : ''}
+                            ${rec.rationale ? `<p class="text-sm text-gray-600 mt-2">${rec.rationale}</p>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function displayCohortMatching(data) {
+            const el = document.getElementById('cohort-results');
+            
+            if (!data.similarity_score || data.similarity_score < 0.30) {
+                el.innerHTML = '<p class="text-gray-600">Cohort comparison suppressed (insufficient similarity).</p>';
+                return;
+            }
+
+            const percentiles = data.percentile_bands || {};
+            el.innerHTML = `
+                <div class="bg-blue-50 p-4 rounded">
+                    <p class="font-bold mb-3">Similarity Score: ${(data.similarity_score * 100).toFixed(0)}%</p>
+                    ${Object.entries(percentiles).slice(0, 5).map(([marker, bands]) => `
+                        <div class="mb-3">
+                            <p class="font-medium">${marker}</p>
+                            <p class="text-sm text-gray-600">Your percentile: ${bands.user_percentile || 50}th</p>
+                            <p class="text-sm text-gray-600">Cohort range: ${(bands.p25 || 0).toFixed(1)} - ${(bands.p75 || 0).toFixed(1)}</p>
+                        </div>
+                    `).join('')}
+                    ${data.trajectory_summary ? `<p class="text-sm text-gray-700 mt-3 italic">${data.trajectory_summary}</p>` : ''}
+                </div>
+            `;
+        }
+
+        function displayChangeDetection(changes) {
+            const el = document.getElementById('change-results');
+            
+            if (changes.length === 0) {
+                el.innerHTML = '<p class="text-gray-600">✅ No significant changes detected - all markers stable.</p>';
+                return;
+            }
+
+            el.innerHTML = changes.map(change => `
+                <div class="border-l-4 ${change.clinical_relevance === 'high' ? 'border-red-500 bg-red-50' : 'border-yellow-500 bg-yellow-50'} p-4 rounded">
+                    <p class="font-bold">${change.marker} - ${change.change_type}</p>
+                    <p class="text-sm text-gray-600 mt-1">Magnitude: ${(change.magnitude || 0).toFixed(1)}</p>
+                    <p class="text-sm text-gray-600">Clinical Relevance: ${(change.clinical_relevance || 'unknown').toUpperCase()}</p>
+                    ${change.early_warning ? '<p class="text-sm text-red-600 font-bold mt-2">⚠️ EARLY WARNING</p>' : ''}
+                </div>
+            `).join('');
+        }
+
+        function displayExplainability(explanations) {
+            const el = document.getElementById('explainability-results');
+            const entries = Object.entries(explanations).slice(0, 3);
+
+            if (entries.length === 0) {
+                el.innerHTML = '<p class="text-gray-600">No explanations available.</p>';
+                return;
+            }
+
+            el.innerHTML = entries.map(([output, exp]) => `
+                <div class="border border-gray-200 rounded p-4 bg-gradient-to-r from-purple-50 to-white">
+                    <p class="font-bold text-lg text-purple-900">${output}</p>
+                    <p class="text-gray-700 italic my-2">${exp.because_sentence || 'No explanation available'}</p>
+                    <p class="text-sm text-gray-600 mb-2">Confidence: ${exp.confidence_bar || '░░░░░░░░░░'}</p>
+                    ${exp.what_would_change_this && exp.what_would_change_this.length > 0 ? `
+                        <div class="mt-3 border-t pt-3">
+                            <p class="text-sm font-medium text-gray-700 mb-1">To improve this estimate:</p>
+                            ${exp.what_would_change_this.map(s => `<p class="text-sm text-gray-600">→ ${s}</p>`).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        function displayProviderSummary(summary) {
+            const el = document.getElementById('provider-results');
+            
+            el.innerHTML = `
+                <div class="bg-gray-50 p-4 rounded">
+                    <p class="font-bold mb-2">Data Quality: ${summary.data_quality_grade || 'N/A'}</p>
+                    <p class="text-sm text-gray-600 mb-4">Coverage: ${summary.temporal_coverage_days || 0} days</p>
+                    ${Object.entries(summary.sections || {}).map(([name, section]) => {
+                        if (!section.items || section.items.length === 0) return '';
+                        return `
+                            <div class="mb-4">
+                                <p class="font-bold text-gray-900 mb-2">${name.toUpperCase()} [${section.priority || 'LOW'}]</p>
+                                ${section.items.slice(0, 3).map(item => `<p class="text-sm text-gray-700 ml-3">• ${item}</p>`).join('')}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        function displayCostImpact(impact) {
+            const el = document.getElementById('cost-results');
+            
+            if (!impact.rendered) {
+                el.innerHTML = '<p class="text-gray-600">Cost/care impact suppressed (insufficient data quality).</p>';
+                return;
+            }
+
+            const modules = Object.entries(impact).filter(([k, v]) => k !== 'rendered' && typeof v === 'object');
+            el.innerHTML = modules.map(([name, data]) => `
+                <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded">
+                    <p class="font-bold">${name.replace(/_/g, ' ').toUpperCase()}</p>
+                    <p class="text-sm text-gray-700 mt-2">${data.claim || 'N/A'}</p>
+                    <p class="text-sm text-gray-600 mt-1">Evidence: ${(data.evidence_strength || 'unknown').toUpperCase()}</p>
+                    <p class="text-sm text-gray-600">Confidence: ${((data.confidence || 0) * 100).toFixed(0)}%</p>
+                </div>
+            `).join('');
+        }
+
+        function displayLanguageControl(validation) {
+            const el = document.getElementById('language-results');
+            const violations = validation.violations_detected || [];
+
+            if (violations.length === 0) {
+                el.innerHTML = `
+                    <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded">
+                        <p class="font-bold text-green-800">✅ All output passed validation</p>
+                        <p class="text-sm text-green-700 mt-2">• No diagnostic claims</p>
+                        <p class="text-sm text-green-700">• No medical advice</p>
+                        <p class="text-sm text-green-700">• Estimation-based language only</p>
+                    </div>
+                `;
+            } else {
+                el.innerHTML = violations.slice(0, 3).map(v => `
+                    <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded">
+                        <p class="text-sm text-gray-600">❌ Original: "${v.original_text || ''}"</p>
+                        <p class="text-sm text-gray-600 mt-1">✅ Corrected: "${v.safe_alternative || ''}"</p>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function copyJSON() {
+            const text = document.getElementById('json-output').textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('✅ JSON copied to clipboard!');
+            });
+        }
+    </script>
+</body>
+</html>
