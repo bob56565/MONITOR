@@ -141,13 +141,20 @@ class A2Processor:
             ISFAnalyteStream.name == "glucose"
         ).all()
         if glucose_streams:
-            timestamps = [s.timestamp for s in glucose_streams if s.timestamp]
-            if timestamps:
-                days_covered = (max(timestamps) - min(timestamps)).days + 1
-                last_seen = max(timestamps)
+            all_timestamps = []
+            for s in glucose_streams:
+                if s.timestamps_json:
+                    # timestamps_json is an array of ISO strings, convert to datetime
+                    from datetime import datetime
+                    timestamps = [datetime.fromisoformat(ts.replace('Z', '+00:00')) for ts in s.timestamps_json]
+                    all_timestamps.extend(timestamps)
+            
+            if all_timestamps:
+                days_covered = (max(all_timestamps) - min(all_timestamps)).days + 1
+                last_seen = max(all_timestamps)
                 # Simple quality: completeness
                 expected_readings = days_covered * 96  # 15-min intervals
-                actual_readings = len(glucose_streams)
+                actual_readings = sum(len(s.values_json) for s in glucose_streams if s.values_json)
                 quality_score = min(1.0, actual_readings / max(expected_readings, 1))
                 missing_rate = 1.0 - quality_score
             else:
@@ -174,12 +181,18 @@ class A2Processor:
             ISFAnalyteStream.name == "lactate"
         ).all()
         if lactate_streams:
-            timestamps = [s.timestamp for s in lactate_streams if s.timestamp]
-            if timestamps:
-                days_covered = (max(timestamps) - min(timestamps)).days + 1
-                last_seen = max(timestamps)
+            all_timestamps = []
+            for s in lactate_streams:
+                if s.timestamps_json:
+                    from datetime import datetime
+                    timestamps = [datetime.fromisoformat(ts.replace('Z', '+00:00')) for ts in s.timestamps_json]
+                    all_timestamps.extend(timestamps)
+            
+            if all_timestamps:
+                days_covered = (max(all_timestamps) - min(all_timestamps)).days + 1
+                last_seen = max(all_timestamps)
                 expected_readings = days_covered * 96
-                actual_readings = len(lactate_streams)
+                actual_readings = sum(len(s.values_json) for s in lactate_streams if s.values_json)
                 quality_score = min(1.0, actual_readings / max(expected_readings, 1))
                 missing_rate = 1.0 - quality_score
             else:
