@@ -1,0 +1,2222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MONITOR Platform - Test Harness (Dev Only)</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        .header .subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+            font-weight: normal;
+        }
+        .dev-badge {
+            display: inline-block;
+            background: #ff6b6b;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .content {
+            padding: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .section-header {
+            background: #f5f5f5;
+            padding: 15px 20px;
+            font-weight: bold;
+            font-size: 18px;
+            color: #333;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .section-header:hover {
+            background: #efefef;
+        }
+        .section-body {
+            padding: 20px;
+            display: none;
+        }
+        .section-body.active {
+            display: block;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.3s;
+        }
+        .tab:hover {
+            background: #f5f5f5;
+        }
+        .tab.active {
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 14px;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border 0.3s;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .form-group textarea {
+            min-height: 100px;
+            font-family: monospace;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #218838;
+        }
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+        .btn-block {
+            width: 100%;
+            margin-right: 0;
+        }
+        .status-box {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+        .output-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .output-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            background: #fafafa;
+        }
+        .output-card h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .output-item {
+            margin-bottom: 15px;
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+        .output-item-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .output-item-value {
+            font-size: 18px;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        .output-item-confidence {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .output-item-drivers {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+        .output-item-action {
+            font-size: 12px;
+            color: #28a745;
+            margin-top: 5px;
+            font-style: italic;
+        }
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-right: 5px;
+        }
+        .badge-measured {
+            background: #d4edda;
+            color: #155724;
+        }
+        .badge-inferred {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .badge-high {
+            background: #d4edda;
+            color: #155724;
+        }
+        .badge-medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .badge-low {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .debug-panel {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .debug-panel h5 {
+            margin-bottom: 10px;
+            color: #495057;
+        }
+        .debug-panel pre {
+            background: #fff;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .collapse-toggle {
+            font-size: 20px;
+            color: #667eea;
+        }
+        .hidden {
+            display: none;
+        }
+        .analyte-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr auto;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: end;
+        }
+        .analyte-list {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 10px;
+            background: #f9f9f9;
+        }
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        .json-viewer {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .pipeline-status {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .pipeline-step {
+            text-align: center;
+            flex: 1;
+        }
+        .pipeline-step-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+        .pipeline-step-name {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .pipeline-step-status {
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .step-pending { color: #6c757d; }
+        .step-running { color: #ffc107; }
+        .step-success { color: #28a745; }
+        .step-error { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧪 MONITOR Platform Test Harness</h1>
+            <p class="subtitle">End-to-End Pipeline Testing & Validation</p>
+            <span class="dev-badge">DEV MODE ONLY</span>
+        </div>
+
+        <div class="content">
+            <!-- Quick Actions -->
+            <div style="margin-bottom: 20px;">
+                <button class="btn btn-success" onclick="loadDemoScenario()">🚀 Load Demo Scenario (One-Click Test)</button>
+                <button class="btn btn-primary btn-block" onclick="runFullPipeline()" style="max-width: 400px; margin-top: 10px;">▶️ RUN FULL PIPELINE (Part A → A2 → Part B)</button>
+            </div>
+
+            <!-- Pipeline Status -->
+            <div id="pipelineStatus" class="pipeline-status hidden">
+                <div class="pipeline-step">
+                    <div class="pipeline-step-icon" id="step1-icon">⏹</div>
+                    <div class="pipeline-step-name">Part A: Data Ingestion</div>
+                    <div class="pipeline-step-status step-pending" id="step1-status">Pending</div>
+                </div>
+                <div class="pipeline-step">
+                    <div class="pipeline-step-icon" id="step2-icon">⏹</div>
+                    <div class="pipeline-step-name">A2: Data Quality</div>
+                    <div class="pipeline-step-status step-pending" id="step2-status">Pending</div>
+                </div>
+                <div class="pipeline-step">
+                    <div class="pipeline-step-icon" id="step3-icon">⏹</div>
+                    <div class="pipeline-step-name">Part B: Generate Report</div>
+                    <div class="pipeline-step-status step-pending" id="step3-status">Pending</div>
+                </div>
+                <div class="pipeline-step">
+                    <div class="pipeline-step-icon" id="step4-icon">⏹</div>
+                    <div class="pipeline-step-name">Display Results</div>
+                    <div class="pipeline-step-status step-pending" id="step4-status">Pending</div>
+                </div>
+            </div>
+
+            <div id="statusMessages"></div>
+
+            <!-- SECTION A: INPUT BUILDER -->
+            <div class="section">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <span>📝 SECTION A: Input Builder (Part A Data)</span>
+                    <span class="collapse-toggle">−</span>
+                </div>
+                <div class="section-body active">
+                    <div class="tabs">
+                        <button class="tab active" onclick="switchTab('specimens')">Specimen Uploads</button>
+                        <button class="tab" onclick="switchTab('isf')">ISF Streams</button>
+                        <button class="tab" onclick="switchTab('vitals')">Vitals Trends</button>
+                        <button class="tab" onclick="switchTab('soap')">SOAP/Profile</button>
+                        <button class="tab" onclick="switchTab('qualitative')">Qualitative Encoding</button>
+                    </div>
+
+                    <!-- Tab 1: Specimen Uploads -->
+                    <div id="tab-specimens" class="tab-content active">
+                        <!-- FILE UPLOAD SECTION -->
+                        <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 30px;">
+                            <h3 style="margin-bottom: 10px;">📁 File Upload (JSON/CSV/TXT preferred)</h3>
+                            <p style="font-size: 13px; color: #666; margin-bottom: 10px;">Upload lab results in JSON format. Example structure will be auto-filled after upload.</p>
+                            <input type="file" id="specimenFileUpload" accept=".json,.csv,.txt" style="margin-bottom: 10px;">
+                            <button class="btn btn-primary" onclick="parseUploadedFile()">Parse & Load File</button>
+                            <div id="fileUploadStatus" style="margin-top: 10px;"></div>
+                        </div>
+
+                        <h3>🩸 Blood Specimen (REQUIRED: At least 1 specimen type)</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Collection DateTime ⚠️ REQUIRED</label>
+                                <input type="datetime-local" id="blood_datetime">
+                            </div>
+                            <div class="form-group">
+                                <label>Fasting Status ⚠️ REQUIRED</label>
+                                <select id="blood_fasting">
+                                    <option value="">Select...</option>
+                                    <option value="fasting">Fasting (8+ hours)</option>
+                                    <option value="non_fasting">Non-Fasting</option>
+                                    <option value="unknown">Unknown</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Panel Type</label>
+                                <select id="blood_panel">
+                                    <option value="">Select Panel...</option>
+                                    <option value="metabolic_cmp">Comprehensive Metabolic Panel (CMP)</option>
+                                    <option value="cbc">Complete Blood Count (CBC)</option>
+                                    <option value="lipid">Lipid Panel</option>
+                                    <option value="endocrine">Endocrine Panel</option>
+                                    <option value="inflammation">Inflammation Markers</option>
+                                    <option value="vitamins_minerals">Vitamins & Minerals</option>
+                                    <option value="custom">Custom/Mixed</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="analyte-list">
+                            <h4>Blood Analytes (Add all available measurements) <button class="btn btn-small btn-secondary" onclick="addBloodAnalyte()">+ Add Analyte</button></h4>
+                            <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Common: glucose, sodium, potassium, cholesterol, HbA1c, TSH, vitamin D, CBC values</p>
+                            <div id="bloodAnalytesList"></div>
+                        </div>
+
+                        <h3 style="margin-top: 30px;">💧 Saliva Specimen (Optional)</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Collection Type</label>
+                                <select id="saliva_type">
+                                    <option value="spot">Spot Collection (single sample)</option>
+                                    <option value="serial">Serial Collection (multiple timepoints)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Collection Time (for cortisol rhythm)</label>
+                                <input type="time" id="saliva_time" placeholder="e.g., 08:00">
+                            </div>
+                        </div>
+                        <div class="analyte-list">
+                            <h4>Saliva Analytes <button class="btn btn-small btn-secondary" onclick="addSalivaAnalyte()">+ Add Analyte</button></h4>
+                            <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Common: cortisol (morning/evening), alpha amylase, pH, DHEA-S</p>
+                            <div id="salivaAnalytesList"></div>
+                        </div>
+
+                        <h3 style="margin-top: 30px;">💦 Sweat Specimen (Optional)</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Sweat Rate (mL/min)</label>
+                                <input type="number" step="0.01" id="sweat_rate" placeholder="e.g., 0.5">
+                            </div>
+                            <div class="form-group">
+                                <label>Osmolality</label>
+                                <input type="number" id="sweat_osmolality" placeholder="e.g., 85">
+                            </div>
+                            <div class="form-group">
+                                <label>Collection DateTime</label>
+                                <input type="datetime-local" id="sweat_datetime">
+                            </div>
+                        </div>
+                        <div class="analyte-list">
+                            <h4>Sweat Analytes <button class="btn btn-small btn-secondary" onclick="addSweatAnalyte()">+ Add Analyte</button></h4>
+                            <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Common: Na, Cl, K, lactate, glucose</p>
+                            <div id="sweatAnalytesList"></div>
+                        </div>
+
+                        <h3 style="margin-top: 30px;">🚽 Urine Specimen (Optional)</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Collection DateTime</label>
+                                <input type="datetime-local" id="urine_datetime">
+                            </div>
+                            <div class="form-group">
+                                <label>Collection Type</label>
+                                <select id="urine_type">
+                                    <option value="spot">Spot Sample</option>
+                                    <option value="first_morning">First Morning</option>
+                                    <option value="24h">24-Hour Collection</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="analyte-list">
+                            <h4>Urine Analytes <button class="btn btn-small btn-secondary" onclick="addUrineAnalyte()">+ Add Analyte</button></h4>
+                            <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Common: specific gravity, pH, protein, glucose, ketones, microalbumin</p>
+                            <div id="urineAnalytesList"></div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: ISF Streams -->
+                    <div id="tab-isf" class="tab-content">
+                        <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                            <strong>⚠️ ISF Monitor Data (Constant Measures):</strong>
+                            <p style="font-size: 13px; margin-top: 5px;">Continuous monitoring data from wearable sensors. At minimum, provide glucose readings with timestamps.</p>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Device Type ⚠️ REQUIRED</label>
+                                <select id="isf_device">
+                                    <option value="">Select Device...</option>
+                                    <option value="CGM">Continuous Glucose Monitor (CGM)</option>
+                                    <option value="Multi-analyte">Multi-analyte ISF Monitor</option>
+                                    <option value="Research">Research Device</option>
+                                    <option value="Other">Other Wearable</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Sensor Serial Number</label>
+                                <input type="text" id="isf_serial" placeholder="e.g., SN12345678">
+                            </div>
+                            <div class="form-group">
+                                <label>Calibration Status</label>
+                                <select id="isf_calibration">
+                                    <option value="valid">Valid/Calibrated</option>
+                                    <option value="expired">Expired</option>
+                                    <option value="needs_calibration">Needs Calibration</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Overall Signal Quality</label>
+                                <select id="isf_quality">
+                                    <option value="excellent">Excellent</option>
+                                    <option value="good">Good</option>
+                                    <option value="fair">Fair</option>
+                                    <option value="poor">Poor</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="analyte-list">
+                            <h4>ISF Analyte Streams (Time-Series Data) <button class="btn btn-small btn-secondary" onclick="addISFStream()">+ Add Stream</button></h4>
+                            <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Enter comma-separated values with matching timestamps. Example: glucose readings every 15 minutes</p>
+                            <div id="isfStreamsList"></div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: Vitals -->
+                    <div id="tab-vitals" class="tab-content">
+                        <h4>Cardiovascular</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Resting HR (bpm)</label>
+                                <input type="number" id="vitals_hr" placeholder="e.g., 68">
+                            </div>
+                            <div class="form-group">
+                                <label>Systolic BP (mmHg)</label>
+                                <input type="number" id="vitals_sbp" placeholder="e.g., 118">
+                            </div>
+                            <div class="form-group">
+                                <label>Diastolic BP (mmHg)</label>
+                                <input type="number" id="vitals_dbp" placeholder="e.g., 76">
+                            </div>
+                            <div class="form-group">
+                                <label>HRV (ms)</label>
+                                <input type="number" id="vitals_hrv" placeholder="e.g., 55">
+                            </div>
+                        </div>
+                        <h4 style="margin-top: 20px;">Respiratory & Temperature</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Respiratory Rate (breaths/min)</label>
+                                <input type="number" id="vitals_rr" placeholder="e.g., 14">
+                            </div>
+                            <div class="form-group">
+                                <label>SpO2 (%)</label>
+                                <input type="number" id="vitals_spo2" placeholder="e.g., 98">
+                            </div>
+                            <div class="form-group">
+                                <label>Body Temp (°C)</label>
+                                <input type="number" step="0.1" id="vitals_temp" placeholder="e.g., 36.7">
+                            </div>
+                        </div>
+                        <h4 style="margin-top: 20px;">Sleep & Activity</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Sleep Duration (hrs)</label>
+                                <input type="number" step="0.1" id="vitals_sleep" placeholder="e.g., 7.5">
+                            </div>
+                            <div class="form-group">
+                                <label>Sleep Quality Score (0-100)</label>
+                                <input type="number" id="vitals_sleep_quality" placeholder="e.g., 78">
+                            </div>
+                            <div class="form-group">
+                                <label>Daily Steps</label>
+                                <input type="number" id="vitals_steps" placeholder="e.g., 8500">
+                            </div>
+                            <div class="form-group">
+                                <label>Active Minutes</label>
+                                <input type="number" id="vitals_active_min" placeholder="e.g., 45">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 4: SOAP/Profile -->
+                    <div id="tab-soap" class="tab-content">
+                        <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                            <strong>📋 Patient Profile (SOAP Notes):</strong>
+                            <p style="font-size: 13px; margin-top: 5px;">Demographic, medical history, and lifestyle context. Used for personalized priors and risk assessment.</p>
+                        </div>
+                        
+                        <h4>Demographics & Anthropometrics ⚠️ REQUIRED</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Age (years) ⚠️</label>
+                                <input type="number" id="soap_age" placeholder="e.g., 35" min="0" max="120">
+                            </div>
+                            <div class="form-group">
+                                <label>Biological Sex ⚠️ REQUIRED</label>
+                                <select id="soap_sex">
+                                    <option value="">Select...</option>
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                    <option value="other">Other/Intersex</option>
+                                    <option value="prefer_not_to_say">Prefer Not to Say</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Height (cm)</label>
+                                <input type="number" id="soap_height" placeholder="e.g., 175" step="0.1">
+                            </div>
+                            <div class="form-group">
+                                <label>Weight (kg)</label>
+                                <input type="number" step="0.1" id="soap_weight" placeholder="e.g., 75.5">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Ethnicity (optional, affects priors)</label>
+                                <select id="soap_ethnicity">
+                                    <option value="">Select...</option>
+                                    <option value="caucasian">Caucasian</option>
+                                    <option value="african_american">African American</option>
+                                    <option value="hispanic">Hispanic/Latino</option>
+                                    <option value="asian">Asian</option>
+                                    <option value="native_american">Native American</option>
+                                    <option value="mixed">Mixed</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Waist Circumference (cm)</label>
+                                <input type="number" id="soap_waist" placeholder="e.g., 85">
+                            </div>
+                            <div class="form-group">
+                                <label>BMI (auto-calculated if height/weight provided)</label>
+                                <input type="number" step="0.1" id="soap_bmi" placeholder="Auto" readonly>
+                            </div>
+                        </div>
+
+                        <h4 style="margin-top: 20px;">Medical History</h4>
+                        <div class="form-group">
+                            <label>Primary Diagnoses (Ctrl+Click for multiple)</label>
+                            <select id="soap_diagnoses" multiple style="height: 120px;">
+                                <option value="T2D">Type 2 Diabetes (T2D)</option>
+                                <option value="T1D">Type 1 Diabetes (T1D)</option>
+                                <option value="PREDIABETES">Prediabetes / Impaired Glucose Tolerance</option>
+                                <option value="HTN">Hypertension (High Blood Pressure)</option>
+                                <option value="DYSLIPIDEMIA">Dyslipidemia (High Cholesterol)</option>
+                                <option value="OBESITY">Obesity</option>
+                                <option value="METABOLIC_SYNDROME">Metabolic Syndrome</option>
+                                <option value="THYROID_DISORDER">Thyroid Disorder (Hypo/Hyperthyroid)</option>
+                                <option value="PCOS">PCOS (Polycystic Ovary Syndrome)</option>
+                                <option value="CVD">Cardiovascular Disease</option>
+                                <option value="CKD">Chronic Kidney Disease</option>
+                                <option value="FATTY_LIVER">Non-Alcoholic Fatty Liver Disease</option>
+                                <option value="SLEEP_APNEA">Sleep Apnea</option>
+                                <option value="AUTOIMMUNE">Autoimmune Disorder</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Family History (comma-separated conditions)</label>
+                            <input type="text" id="soap_family_history" placeholder="e.g., T2D (father), CVD (mother)">
+                        </div>
+
+                        <h4 style="margin-top: 20px;">Medications & Supplements</h4>
+                        <div class="form-group">
+                            <label>Current Medications (comma-separated with dosage)</label>
+                            <input type="text" id="soap_medications" placeholder="e.g., Metformin 500mg BID, Lisinopril 10mg QD, Atorvastatin 20mg QD">
+                        </div>
+                        <div class="form-group">
+                            <label>Supplements (comma-separated)</label>
+                            <input type="text" id="soap_supplements" placeholder="e.g., Vitamin D 2000 IU, Omega-3 1000mg, Magnesium 400mg">
+                        </div>
+
+                        <h4 style="margin-top: 20px;">Lifestyle Factors</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Smoking Status</label>
+                                <select id="soap_smoking">
+                                    <option value="never">Never Smoked</option>
+                                    <option value="former">Former Smoker</option>
+                                    <option value="current">Current Smoker</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Alcohol Consumption</label>
+                                <select id="soap_alcohol">
+                                    <option value="none">None</option>
+                                    <option value="low">Low (1-3 drinks/week)</option>
+                                    <option value="moderate">Moderate (4-7 drinks/week)</option>
+                                    <option value="high">High (8+ drinks/week)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 5: Qualitative Encoding -->
+                    <div id="tab-qualitative" class="tab-content">
+                        <h4>Subjective Inputs (Qualitative → Quantitative Encoding)</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Stress Level</label>
+                                <select id="qual_stress">
+                                    <option value="">Select...</option>
+                                    <option value="low">Low</option>
+                                    <option value="moderate">Moderate</option>
+                                    <option value="high">High</option>
+                                    <option value="severe">Severe</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Sleep Quality</label>
+                                <select id="qual_sleep">
+                                    <option value="">Select...</option>
+                                    <option value="excellent">Excellent</option>
+                                    <option value="good">Good</option>
+                                    <option value="fair">Fair</option>
+                                    <option value="poor">Poor</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Diet Pattern</label>
+                                <select id="qual_diet">
+                                    <option value="">Select...</option>
+                                    <option value="standard">Standard</option>
+                                    <option value="low_carb">Low Carb</option>
+                                    <option value="keto">Keto</option>
+                                    <option value="high_sodium">High Sodium</option>
+                                    <option value="low_sodium">Low Sodium</option>
+                                    <option value="vegetarian">Vegetarian</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Caffeine Intake</label>
+                                <select id="qual_caffeine">
+                                    <option value="">Select...</option>
+                                    <option value="none">None</option>
+                                    <option value="low">Low (1-2 cups/day)</option>
+                                    <option value="moderate">Moderate (3-4 cups/day)</option>
+                                    <option value="high">High (5+ cups/day)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Hydration Status</label>
+                                <select id="qual_hydration">
+                                    <option value="">Select...</option>
+                                    <option value="well_hydrated">Well Hydrated</option>
+                                    <option value="adequate">Adequate</option>
+                                    <option value="mild_dehydration">Mild Dehydration</option>
+                                    <option value="dehydrated">Dehydrated</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Exercise Pattern</label>
+                                <select id="qual_exercise">
+                                    <option value="">Select...</option>
+                                    <option value="sedentary">Sedentary</option>
+                                    <option value="light">Light Activity</option>
+                                    <option value="moderate">Moderate Activity</option>
+                                    <option value="high">High Activity</option>
+                                    <option value="athlete">Athlete Level</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION B: OUTPUT VIEWER (Part B) -->
+            <div class="section">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <span>📊 SECTION B: Output Viewer (Part B Report - 35 Outputs)</span>
+                    <span class="collapse-toggle">−</span>
+                </div>
+                <div class="section-body active">
+                    <div id="outputViewer">
+                        <div class="status-info">No results yet. Run the pipeline to generate Part B report.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION C: DEBUG PANEL (A2) -->
+            <div class="section">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <span>🔍 DEBUG PANEL (A2 Data Quality & Provenance)</span>
+                    <span class="collapse-toggle">+</span>
+                </div>
+                <div class="section-body">
+                    <div id="debugPanel">
+                        <div class="status-info">No debug data yet. Run the pipeline to see A2 processing details.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION D: EXPORT & DOWNLOAD -->
+            <div class="section">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <span>💾 Export & Download</span>
+                    <span class="collapse-toggle">+</span>
+                </div>
+                <div class="section-body">
+                    <button class="btn btn-success" onclick="exportJSON('inputs')">📥 Download Normalized Inputs (JSON)</button>
+                    <button class="btn btn-success" onclick="exportJSON('report')">📥 Download Final Report (JSON)</button>
+                    <button class="btn btn-success" onclick="exportJSON('provenance')">📥 Download Provenance Bundle (JSON)</button>
+                    <button class="btn btn-secondary" onclick="copyToClipboard('inputs')">📋 Copy Inputs to Clipboard</button>
+                    <button class="btn btn-secondary" onclick="copyToClipboard('report')">📋 Copy Report to Clipboard</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        // Fix API_BASE for GitHub Codespaces
+        let API_BASE;
+        if (window.location.hostname === 'localhost') {
+            API_BASE = 'http://localhost:8000';
+        } else if (window.location.hostname.includes('app.github.dev')) {
+            // GitHub Codespaces format: replace port 3000 with 8000
+            API_BASE = window.location.origin.replace('-3000.', '-8000.');
+        } else {
+            API_BASE = `${window.location.protocol}//${window.location.hostname}:8000`;
+        }
+        console.log('API_BASE:', API_BASE);
+        
+        let token = localStorage.getItem('token');
+        let submissionId = null;
+        let partAData = null;
+        let a2Data = {};
+        let partBReport = null;
+        let isAuthenticating = false; // Prevent concurrent authentication attempts
+        let authenticationPromise = null; // Store pending authentication promise
+
+        // Blood analytes counter
+        let bloodAnalyteCounter = 0;
+        let salivaAnalyteCounter = 0;
+        let isfStreamCounter = 0;
+
+        // Common blood analytes
+        const BLOOD_ANALYTES = [
+            'glucose', 'sodium_na', 'potassium_k', 'chloride_cl', 'co2_bicarb',
+            'bun', 'creatinine', 'calcium', 'total_cholesterol', 'ldl', 'hdl',
+            'triglycerides', 'hba1c', 'tsh', 'free_t4', 'vitamin_d_25oh',
+            'wbc', 'rbc', 'hgb', 'hct', 'platelets'
+        ];
+
+        const SALIVA_ANALYTES = [
+            'cortisol_morning', 'cortisol_evening', 'alpha_amylase', 'ph', 'dhea_s', 'flow_rate'
+        ];
+
+        const SWEAT_ANALYTES = [
+            'sodium_na', 'chloride_cl', 'potassium_k', 'lactate', 'glucose', 'ph'
+        ];
+
+        const URINE_ANALYTES = [
+            'specific_gravity', 'ph', 'protein', 'glucose', 'ketones', 'blood', 
+            'leukocyte_esterase', 'nitrite', 'microalbumin', 'creatinine'
+        ];
+
+        const ISF_ANALYTES = [
+            'glucose', 'lactate', 'sodium_na', 'potassium_k', 'ph'
+        ];
+
+        // ============================================
+        // BULLETPROOF AUTHENTICATION SYSTEM
+        // Handles: expired tokens, invalid tokens, missing users, database resets
+        // Auto-recovers from ANY auth failure
+        // ============================================
+
+        async function validateToken(testToken) {
+            /**
+             * Validate token by attempting a lightweight API call
+             * Returns true if token is valid, false otherwise
+             */
+            try {
+                const testRes = await fetch(`${API_BASE}/auth/profile`, {
+                    headers: {
+                        'Authorization': `Bearer ${testToken}`,
+                        'Accept': 'application/json'
+                    }
+                });
+                return testRes.ok;
+            } catch {
+                return false;
+            }
+        }
+
+        async function clearAuthState() {
+            /**
+             * Clear all authentication state - localStorage and memory
+             */
+            console.log('🧹 Clearing authentication state...');
+            token = null;
+            localStorage.removeItem('token');
+            localStorage.removeItem('devTestEmail');
+            localStorage.removeItem('devTestPassword');
+        }
+
+        async function createFreshAccount() {
+            /**
+             * Create a brand new test account with guaranteed-unique credentials
+             */
+            const timestamp = Date.now();
+            const randomId = Math.random().toString(36).substr(2, 9);
+            const testEmail = `devtest_${timestamp}_${randomId}@example.com`;
+            const testPassword = 'DevTestPassword123!';
+            
+            console.log(`📝 Creating fresh account: ${testEmail}`);
+            
+            try {
+                const signupRes = await fetch(`${API_BASE}/auth/signup`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: testEmail,
+                        password: testPassword,
+                        name: 'Dev Test User'
+                    })
+                });
+
+                if (!signupRes.ok) {
+                    const errorData = await signupRes.json();
+                    console.error('Signup failed:', signupRes.status, errorData);
+                    return null;
+                }
+
+                const signupData = await signupRes.json();
+                
+                if (signupData.access_token) {
+                    // Store new credentials
+                    token = signupData.access_token;
+                    localStorage.setItem('token', token);
+                    localStorage.setItem('devTestEmail', testEmail);
+                    localStorage.setItem('devTestPassword', testPassword);
+                    console.log('✅ Fresh account created successfully');
+                    return token;
+                }
+            } catch (err) {
+                console.error('Signup request failed:', err);
+            }
+            
+            return null;
+        }
+
+        async function autoAuthenticate() {
+            /**
+             * BULLETPROOF auto-authentication with multiple fallback strategies
+             * 
+             * Strategy:
+             * 1. Check if we have a token in memory - validate it
+             * 2. Check if we have a token in localStorage - validate it
+             * 3. Try logging in with stored credentials
+             * 4. Create a brand new account
+             * 5. If all fails, report backend connectivity issue
+             */
+            
+            // Prevent concurrent authentication attempts
+            if (isAuthenticating && authenticationPromise) {
+                console.log('🔐 Authentication already in progress, waiting...');
+                return await authenticationPromise;
+            }
+            
+            isAuthenticating = true;
+            console.log('🔐 Starting bulletproof authentication...');
+            
+            // Create promise for concurrent callers to wait on
+            authenticationPromise = (async () => {
+                try {
+                    // Strategy 1: Check in-memory token
+                    if (token) {
+                        console.log('📌 Found token in memory, validating...');
+                        const isValid = await validateToken(token);
+                        if (isValid) {
+                            console.log('✅ Memory token is valid');
+                            showStatus('✅ Already authenticated', 'success');
+                            return true;
+                        } else {
+                            console.log('❌ Memory token is invalid, clearing...');
+                            token = null;
+                        }
+                    }
+                    
+                    // Strategy 2: Check localStorage token
+                    const storedToken = localStorage.getItem('token');
+                    if (storedToken && storedToken !== token) {
+                        console.log('📌 Found token in localStorage, validating...');
+                        const isValid = await validateToken(storedToken);
+                        if (isValid) {
+                            console.log('✅ Stored token is valid');
+                            token = storedToken; // Update in-memory token
+                            showStatus('✅ Authenticated from stored session', 'success');
+                            return true;
+                        } else {
+                            console.log('❌ Stored token is invalid (user may have been deleted), clearing...');
+                            await clearAuthState();
+                        }
+                    }
+                    
+                    // Strategy 3: Try login with stored credentials
+                    const storedEmail = localStorage.getItem('devTestEmail');
+                    const storedPassword = localStorage.getItem('devTestPassword');
+                    
+                    if (storedEmail && storedPassword) {
+                        console.log(`📌 Attempting login with stored credentials: ${storedEmail}`);
+                        try {
+                            const loginRes = await fetch(`${API_BASE}/auth/login`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    email: storedEmail,
+                                    password: storedPassword
+                                })
+                            });
+
+                            if (loginRes.ok) {
+                                const loginData = await loginRes.json();
+                                if (loginData.access_token) {
+                                    token = loginData.access_token;
+                                    localStorage.setItem('token', token);
+                                    console.log('✅ Logged in with stored credentials');
+                                    showStatus('✅ Authenticated with existing account', 'success');
+                                    return true;
+                                }
+                            } else {
+                                console.log('❌ Login failed (user may not exist), will create new account...');
+                                await clearAuthState();
+                            }
+                        } catch (err) {
+                            console.error('Login request failed:', err);
+                            await clearAuthState();
+                        }
+                    }
+                    
+                    // Strategy 4: Create brand new account
+                    console.log('📌 Creating fresh account as fallback...');
+                    showStatus('Creating new test account...', 'info');
+                    
+                    const newToken = await createFreshAccount();
+                    if (newToken) {
+                        console.log('✅ Authentication successful with fresh account');
+                        showStatus('✅ Created and authenticated new test account', 'success');
+                        return true;
+                    }
+                    
+                    // Strategy 5: All failed - backend issue
+                    console.error('❌ ALL authentication strategies failed');
+                    showStatus('❌ Authentication failed - Backend may not be running. Check console.', 'error');
+                    return false;
+                } finally {
+                    isAuthenticating = false;
+                    authenticationPromise = null;
+                }
+            })();
+            
+            return await authenticationPromise;
+        }
+
+        async function handleAuthError(error) {
+            /**
+             * Handle 401 errors by clearing auth state and re-authenticating
+             * Call this whenever you get a 401 response
+             */
+            console.log('🔄 Handling authentication error, will retry...');
+            await clearAuthState();
+            const success = await autoAuthenticate();
+            if (!success) {
+                throw new Error('Re-authentication failed after 401 error');
+            }
+            return true;
+        }
+
+        /**
+         * Ensure user is authenticated before running any operation
+         * Returns true if authenticated, false otherwise
+         * This is the main function to call before any API operation
+         */
+        async function ensureAuthenticated() {
+            // First, sync token from localStorage if it was updated elsewhere
+            const storedToken = localStorage.getItem('token');
+            if (storedToken && storedToken !== token) {
+                token = storedToken;
+            }
+            
+            // If we have a token in memory, validate it
+            if (token) {
+                const isValid = await validateToken(token);
+                if (isValid) {
+                    return true;
+                }
+                // Token is invalid, clear it
+                token = null;
+            }
+            
+            // No valid token, authenticate
+            console.log('🔐 No valid token, authenticating...');
+            return await autoAuthenticate();
+        }
+
+        // Run auto-authentication on page load
+        window.addEventListener('load', () => {
+            autoAuthenticate().then(success => {
+                if (success) {
+                    showStatus('🎯 Test Harness ready! Click "Load Demo Scenario" to start, or enter data manually.', 'info');
+                } else {
+                    showStatus('⚠️ Could not authenticate. Check that backend is running on port 8000.', 'warning');
+                }
+            });
+        });
+
+        // UI Functions
+        function toggleSection(header) {
+            const body = header.nextElementSibling;
+            const toggle = header.querySelector('.collapse-toggle');
+            body.classList.toggle('active');
+            toggle.textContent = body.classList.contains('active') ? '−' : '+';
+        }
+
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+
+        function addBloodAnalyte() {
+            bloodAnalyteCounter++;
+            const container = document.getElementById('bloodAnalytesList');
+            const row = document.createElement('div');
+            row.className = 'analyte-row';
+            row.id = `blood-analyte-${bloodAnalyteCounter}`;
+            row.innerHTML = `
+                <select class="blood-analyte-name">
+                    <option value="">Select analyte...</option>
+                    ${BLOOD_ANALYTES.map(a => `<option value="${a}">${a}</option>`).join('')}
+                </select>
+                <input type="number" step="0.01" class="blood-analyte-value" placeholder="Value">
+                <input type="text" class="blood-analyte-unit" placeholder="Unit (e.g., mg/dL)">
+                <button class="btn btn-small btn-warning" onclick="removeAnalyte('blood-analyte-${bloodAnalyteCounter}')">Remove</button>
+            `;
+            container.appendChild(row);
+        }
+
+        function addSalivaAnalyte() {
+            salivaAnalyteCounter++;
+            const container = document.getElementById('salivaAnalytesList');
+            const row = document.createElement('div');
+            row.className = 'analyte-row';
+            row.id = `saliva-analyte-${salivaAnalyteCounter}`;
+            row.innerHTML = `
+                <select class="saliva-analyte-name">
+                    <option value="">Select analyte...</option>
+                    ${SALIVA_ANALYTES.map(a => `<option value="${a}">${a}</option>`).join('')}
+                </select>
+                <input type="number" step="0.01" class="saliva-analyte-value" placeholder="Value">
+                <input type="text" class="saliva-analyte-unit" placeholder="Unit">
+                <button class="btn btn-small btn-warning" onclick="removeAnalyte('saliva-analyte-${salivaAnalyteCounter}')">Remove</button>
+            `;
+            container.appendChild(row);
+        }
+
+        function addISFStream() {
+            isfStreamCounter++;
+            const container = document.getElementById('isfStreamsList');
+            const row = document.createElement('div');
+            row.className = 'analyte-row';
+            row.id = `isf-stream-${isfStreamCounter}`;
+            row.innerHTML = `
+                <select class="isf-analyte-name">
+                    <option value="">Select analyte...</option>
+                    ${ISF_ANALYTES.map(a => `<option value="${a}">${a}</option>`).join('')}
+                </select>
+                <input type="text" class="isf-analyte-values" placeholder="Values (comma-separated, e.g., 95,102,88)">
+                <input type="text" class="isf-analyte-timestamps" placeholder="Timestamps (e.g., 08:00,08:15,08:30)">
+                <button class="btn btn-small btn-warning" onclick="removeAnalyte('isf-stream-${isfStreamCounter}')">Remove</button>
+            `;
+            container.appendChild(row);
+        }
+
+        function removeAnalyte(id) {
+            document.getElementById(id).remove();
+        }
+
+        function addSweatAnalyte() {
+            const counter = Date.now();
+            const container = document.getElementById('sweatAnalytesList');
+            const row = document.createElement('div');
+            row.className = 'analyte-row';
+            row.id = `sweat-analyte-${counter}`;
+            row.innerHTML = `
+                <select class="sweat-analyte-name">
+                    <option value="">Select analyte...</option>
+                    ${SWEAT_ANALYTES.map(a => `<option value="${a}">${a}</option>`).join('')}
+                </select>
+                <input type="number" step="0.01" class="sweat-analyte-value" placeholder="Value">
+                <input type="text" class="sweat-analyte-unit" placeholder="Unit (e.g., mmol/L)">
+                <button class="btn btn-small btn-warning" onclick="removeAnalyte('sweat-analyte-${counter}')">Remove</button>
+            `;
+            container.appendChild(row);
+        }
+
+        function addUrineAnalyte() {
+            const counter = Date.now();
+            const container = document.getElementById('urineAnalytesList');
+            const row = document.createElement('div');
+            row.className = 'analyte-row';
+            row.id = `urine-analyte-${counter}`;
+            row.innerHTML = `
+                <select class="urine-analyte-name">
+                    <option value="">Select analyte...</option>
+                    ${URINE_ANALYTES.map(a => `<option value="${a}">${a}</option>`).join('')}
+                </select>
+                <input type="number" step="0.01" class="urine-analyte-value" placeholder="Value">
+                <input type="text" class="urine-analyte-unit" placeholder="Unit">
+                <button class="btn btn-small btn-warning" onclick="removeAnalyte('urine-analyte-${counter}')">Remove</button>
+            `;
+            container.appendChild(row);
+        }
+
+        function parseUploadedFile() {
+            const fileInput = document.getElementById('specimenFileUpload');
+            const statusDiv = document.getElementById('fileUploadStatus');
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                statusDiv.innerHTML = '<div class="status-warning">Please select a file first</div>';
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                try {
+                    const content = e.target.result;
+                    let data;
+
+                    // Try to parse as JSON
+                    if (file.name.endsWith('.json')) {
+                        data = JSON.parse(content);
+                    } else if (file.name.endsWith('.csv')) {
+                        // Simple CSV parser for blood labs
+                        const lines = content.split('\n').filter(l => l.trim());
+                        const headers = lines[0].toLowerCase().split(',');
+                        data = { blood_analytes: [] };
+                        
+                        for (let i = 1; i < lines.length; i++) {
+                            const values = lines[i].split(',');
+                            const analyte = {};
+                            headers.forEach((h, idx) => {
+                                analyte[h.trim()] = values[idx]?.trim();
+                            });
+                            data.blood_analytes.push(analyte);
+                        }
+                    } else {
+                        // TXT file - try to find JSON structure
+                        const jsonMatch = content.match(/\{[\s\S]*\}/);
+                        if (jsonMatch) {
+                            data = JSON.parse(jsonMatch[0]);
+                        } else {
+                            throw new Error('No valid JSON structure found in text file');
+                        }
+                    }
+
+                    // Populate form fields from parsed data
+                    loadDataIntoForm(data);
+                    statusDiv.innerHTML = '<div class="status-success">✅ File parsed successfully! Data loaded into form.</div>';
+                } catch (error) {
+                    console.error('Parse error:', error);
+                    statusDiv.innerHTML = `<div class="status-error">❌ Parse failed: ${error.message}</div>`;
+                }
+            };
+
+            reader.readAsText(file);
+        }
+
+        function loadDataIntoForm(data) {
+            // Load blood analytes if present
+            if (data.blood_analytes || data.analytes) {
+                const analytes = data.blood_analytes || data.analytes;
+                document.getElementById('bloodAnalytesList').innerHTML = '';
+                analytes.forEach(a => {
+                    addBloodAnalyte();
+                    const rows = document.querySelectorAll('.blood-analyte-name');
+                    const valueInputs = document.querySelectorAll('.blood-analyte-value');
+                    const unitInputs = document.querySelectorAll('.blood-analyte-unit');
+                    const lastIdx = rows.length - 1;
+                    rows[lastIdx].value = a.name || a.analyte || '';
+                    valueInputs[lastIdx].value = a.value || '';
+                    unitInputs[lastIdx].value = a.unit || '';
+                });
+            }
+
+            // Load ISF data if present
+            if (data.isf_data || data.glucose_readings) {
+                const isfData = data.isf_data || data.glucose_readings;
+                if (Array.isArray(isfData)) {
+                    document.getElementById('isfStreamsList').innerHTML = '';
+                    addISFStream();
+                    document.querySelector('.isf-analyte-name').value = 'glucose';
+                    document.querySelector('.isf-analyte-values').value = isfData.map(r => r.value || r).join(',');
+                }
+            }
+
+            // Load vitals if present
+            if (data.vitals) {
+                const v = data.vitals;
+                if (v.hr) document.getElementById('vitals_hr').value = v.hr;
+                if (v.sbp) document.getElementById('vitals_sbp').value = v.sbp;
+                if (v.dbp) document.getElementById('vitals_dbp').value = v.dbp;
+            }
+
+            showStatus('Data loaded from file into form fields', 'success');
+        }
+
+        function removeAnalyte(id) {
+            document.getElementById(id).remove();
+        }
+
+        function showStatus(message, type = 'info') {
+            const container = document.getElementById('statusMessages');
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `status-box status-${type}`;
+            statusDiv.textContent = message;
+            container.appendChild(statusDiv);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => statusDiv.remove(), 5000);
+        }
+
+        function updatePipelineStep(step, status, icon) {
+            document.getElementById(`step${step}-status`).textContent = status;
+            document.getElementById(`step${step}-status`).className = `pipeline-step-status step-${status.toLowerCase().replace(' ', '-')}`;
+            document.getElementById(`step${step}-icon`).textContent = icon;
+        }
+
+        // Load Demo Scenario
+        function loadDemoScenario() {
+            showStatus('Loading comprehensive demo scenario...', 'info');
+            
+            // Blood specimen - REQUIRED FIELDS
+            document.getElementById('blood_datetime').value = new Date().toISOString().slice(0, 16);
+            document.getElementById('blood_fasting').value = 'fasting';
+            document.getElementById('blood_panel').value = 'metabolic_cmp';
+            
+            // Add comprehensive blood analytes
+            const demoBlood = [
+                {name: 'glucose', value: 95, unit: 'mg/dL'},
+                {name: 'sodium_na', value: 140, unit: 'mmol/L'},
+                {name: 'potassium_k', value: 4.2, unit: 'mmol/L'},
+                {name: 'chloride_cl', value: 102, unit: 'mmol/L'},
+                {name: 'co2_bicarb', value: 24, unit: 'mmol/L'},
+                {name: 'bun', value: 15, unit: 'mg/dL'},
+                {name: 'creatinine', value: 0.9, unit: 'mg/dL'},
+                {name: 'calcium', value: 9.5, unit: 'mg/dL'},
+                {name: 'hba1c', value: 5.7, unit: '%'},
+                {name: 'total_cholesterol', value: 185, unit: 'mg/dL'},
+                {name: 'ldl', value: 110, unit: 'mg/dL'},
+                {name: 'hdl', value: 55, unit: 'mg/dL'},
+                {name: 'triglycerides', value: 100, unit: 'mg/dL'},
+                {name: 'tsh', value: 2.1, unit: 'mIU/L'},
+                {name: 'vitamin_d_25oh', value: 32, unit: 'ng/mL'}
+            ];
+            
+            document.getElementById('bloodAnalytesList').innerHTML = '';
+            demoBlood.forEach((a, i) => {
+                addBloodAnalyte();
+                const rows = document.querySelectorAll('.blood-analyte-name');
+                rows[rows.length - 1].value = a.name;
+                document.querySelectorAll('.blood-analyte-value')[i].value = a.value;
+                document.querySelectorAll('.blood-analyte-unit')[i].value = a.unit;
+            });
+
+            // ISF streams with comprehensive settings
+            document.getElementById('isf_device').value = 'CGM';
+            document.getElementById('isf_serial').value = 'SN12345678';
+            document.getElementById('isf_calibration').value = 'valid';
+            document.getElementById('isf_quality').value = 'good';
+            document.getElementById('isfStreamsList').innerHTML = '';
+            addISFStream();
+            document.querySelector('.isf-analyte-name').value = 'glucose';
+            document.querySelector('.isf-analyte-values').value = '95,102,88,105,92,98,110,94,87,101';
+            document.querySelector('.isf-analyte-timestamps').value = '08:00,08:15,08:30,08:45,09:00,09:15,09:30,09:45,10:00,10:15';
+
+            // Comprehensive vitals
+            document.getElementById('vitals_hr').value = 68;
+            document.getElementById('vitals_sbp').value = 118;
+            document.getElementById('vitals_dbp').value = 76;
+            document.getElementById('vitals_hrv').value = 55;
+            document.getElementById('vitals_rr').value = 14;
+            document.getElementById('vitals_spo2').value = 98;
+            document.getElementById('vitals_temp').value = 36.7;
+            document.getElementById('vitals_sleep').value = 7.5;
+            document.getElementById('vitals_sleep_quality').value = 78;
+            document.getElementById('vitals_steps').value = 8500;
+            document.getElementById('vitals_active_min').value = 45;
+
+            // Comprehensive SOAP profile - REQUIRED FIELDS
+            document.getElementById('soap_age').value = 35;
+            document.getElementById('soap_sex').value = 'male';
+            document.getElementById('soap_height').value = 175;
+            document.getElementById('soap_weight').value = 75.5;
+            document.getElementById('soap_ethnicity').value = 'caucasian';
+            document.getElementById('soap_waist').value = 85;
+            document.getElementById('soap_diagnoses').options[2].selected = true; // Prediabetes
+            document.getElementById('soap_medications').value = 'Metformin 500mg BID, Atorvastatin 20mg QD';
+            document.getElementById('soap_supplements').value = 'Vitamin D 2000 IU, Omega-3 1000mg';
+            document.getElementById('soap_family_history').value = 'T2D (father), CVD (mother)';
+            document.getElementById('soap_smoking').value = 'none';
+            document.getElementById('soap_alcohol').value = 'low';
+
+            // Qualitative encoding - ALL FIELDS
+            document.getElementById('qual_stress').value = 'moderate';
+            document.getElementById('qual_sleep').value = 'good';
+            document.getElementById('qual_diet').value = 'standard';
+            document.getElementById('qual_caffeine').value = 'moderate';
+            document.getElementById('qual_hydration').value = 'adequate';
+            document.getElementById('qual_exercise').value = 'moderate';
+
+            showStatus('✅ Comprehensive demo scenario loaded! All required fields populated. Click "RUN FULL PIPELINE" to test.', 'success');
+        }
+
+        // Collect Form Data
+        function collectFormData() {
+            // Collect blood analytes
+            const bloodAnalytes = [];
+            document.querySelectorAll('.blood-analyte-name').forEach((select, i) => {
+                const name = select.value;
+                const value = parseFloat(document.querySelectorAll('.blood-analyte-value')[i].value);
+                const unit = document.querySelectorAll('.blood-analyte-unit')[i].value;
+                if (name && !isNaN(value) && unit) {
+                    bloodAnalytes.push({name, value, unit});
+                }
+            });
+
+            // Collect saliva analytes
+            const salivaAnalytes = [];
+            document.querySelectorAll('.saliva-analyte-name').forEach((select, i) => {
+                const name = select.value;
+                const value = parseFloat(document.querySelectorAll('.saliva-analyte-value')[i].value);
+                const unit = document.querySelectorAll('.saliva-analyte-unit')[i].value;
+                const timestamp = new Date().toISOString();
+                if (name && !isNaN(value) && unit) {
+                    salivaAnalytes.push({name, value, unit, timestamp});
+                }
+            });
+
+            // Collect sweat analytes
+            const sweatAnalytes = [];
+            document.querySelectorAll('.sweat-analyte-name').forEach((select, i) => {
+                const name = select.value;
+                const value = parseFloat(document.querySelectorAll('.sweat-analyte-value')[i].value);
+                const unit = document.querySelectorAll('.sweat-analyte-unit')[i].value;
+                if (name && !isNaN(value) && unit) {
+                    sweatAnalytes.push({name, value, unit});
+                }
+            });
+
+            // Collect urine analytes
+            const urineAnalytes = [];
+            document.querySelectorAll('.urine-analyte-name').forEach((select, i) => {
+                const name = select.value;
+                const value = document.querySelectorAll('.urine-analyte-value')[i].value;
+                const unit = document.querySelectorAll('.urine-analyte-unit')[i].value;
+                if (name && value && unit) {
+                    // Handle both numeric and qualitative values
+                    const numValue = parseFloat(value);
+                    urineAnalytes.push({
+                        name, 
+                        value: isNaN(numValue) ? value : numValue, 
+                        unit
+                    });
+                }
+            });
+
+            // Collect ISF streams
+            const isfStreams = [];
+            document.querySelectorAll('.isf-analyte-name').forEach((select, i) => {
+                const name = select.value;
+                const valuesStr = document.querySelectorAll('.isf-analyte-values')[i].value;
+                const timestampsStr = document.querySelectorAll('.isf-analyte-timestamps')[i].value;
+                if (name && valuesStr) {
+                    const values = valuesStr.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
+                    const times = timestampsStr ? timestampsStr.split(',').map(t => t.trim()) : [];
+                    const today = new Date().toISOString().split('T')[0];
+                    const timestamps = times.map(t => `${today}T${t}:00`);
+                    
+                    isfStreams.push({
+                        analyte_name: name,
+                        unit: name === 'glucose' ? 'mg/dL' : (name === 'lactate' ? 'mmol/L' : 'mmol/L'),
+                        values,
+                        timestamps: timestamps.length === values.length ? timestamps : values.map((_, idx) => new Date(Date.now() + idx * 15 * 60000).toISOString())
+                    });
+                }
+            });
+
+            // Build Part A submission
+            const data = {
+                specimen_data: {
+                    modalities_selected: []
+                },
+                isf_monitor_data: null,
+                vitals_data: null,
+                soap_profile: null,
+                qualitative_encoding: null
+            };
+
+            // Blood specimen
+            if (bloodAnalytes.length > 0) {
+                const bloodDatetime = document.getElementById('blood_datetime').value;
+                const bloodFasting = document.getElementById('blood_fasting').value;
+                
+                if (!bloodDatetime) {
+                    throw new Error('Blood collection datetime is required when blood analytes are provided');
+                }
+                if (!bloodFasting) {
+                    throw new Error('Fasting status is required when blood analytes are provided');
+                }
+                
+                data.specimen_data.modalities_selected.push('blood');
+                data.specimen_data.blood = [{
+                    collection_datetime: bloodDatetime,
+                    fasting_status: bloodFasting, // Will be 'fasting', 'non_fasting', or 'unknown'
+                    panels: document.getElementById('blood_panel').value ? [document.getElementById('blood_panel').value] : [],
+                    analytes: bloodAnalytes.map(a => ({
+                        name: a.name,
+                        value: a.value, // Float
+                        unit: a.unit,
+                        reference_range_low: null,
+                        reference_range_high: null,
+                        flag: null
+                    })),
+                    source_format: 'manual_entry'
+                }];
+            }
+
+            // Saliva specimen
+            if (salivaAnalytes.length > 0) {
+                data.specimen_data.modalities_selected.push('saliva');
+                data.specimen_data.saliva = [{
+                    collection_type: document.getElementById('saliva_type').value,
+                    analytes: salivaAnalytes,
+                    source_format: 'manual_entry'
+                }];
+            }
+
+            // Sweat specimen
+            if (sweatAnalytes.length > 0) {
+                data.specimen_data.modalities_selected.push('sweat');
+                data.specimen_data.sweat = [{
+                    analytes: sweatAnalytes,
+                    sweat_rate: parseFloat(document.getElementById('sweat_rate').value) || null,
+                    osmolality: parseFloat(document.getElementById('sweat_osmolality').value) || null,
+                    collection_datetime: document.getElementById('sweat_datetime').value || null,
+                    source_format: 'manual_entry'
+                }];
+            }
+
+            // Urine specimen
+            if (urineAnalytes.length > 0) {
+                data.specimen_data.modalities_selected.push('urine');
+                data.specimen_data.urine = [{
+                    analytes: urineAnalytes,
+                    collection_datetime: document.getElementById('urine_datetime').value || null,
+                    collection_type: document.getElementById('urine_type').value,
+                    source_format: 'manual_entry'
+                }];
+            }
+
+            // ISF monitor data
+            if (isfStreams.length > 0) {
+                data.isf_monitor_data = {
+                    core_analytes: isfStreams.map(s => ({
+                        name: s.analyte_name,
+                        values: s.values,
+                        timestamps: s.timestamps,
+                        unit: s.unit
+                    })),
+                    signal_quality: {
+                        calibration_status: document.getElementById('isf_calibration').value || 'valid',
+                        sensor_drift_score: 0.1,
+                        noise_score: 0.05,
+                        dropout_percentage: 0.5
+                    }
+                };
+            }
+
+            // Vitals data
+            const hr = document.getElementById('vitals_hr').value;
+            if (hr) {
+                data.vitals_data = {
+                    cardiovascular: {
+                        heart_rate_resting: [parseInt(hr)],
+                        hrv_rmssd: document.getElementById('vitals_hrv').value ? [parseInt(document.getElementById('vitals_hrv').value)] : [],
+                        blood_pressure_systolic: document.getElementById('vitals_sbp').value ? [parseInt(document.getElementById('vitals_sbp').value)] : [],
+                        blood_pressure_diastolic: document.getElementById('vitals_dbp').value ? [parseInt(document.getElementById('vitals_dbp').value)] : []
+                    },
+                    respiratory_temperature: {
+                        respiratory_rate_rest: document.getElementById('vitals_rr').value ? [parseFloat(document.getElementById('vitals_rr').value)] : [],
+                        spo2: document.getElementById('vitals_spo2').value ? [parseFloat(document.getElementById('vitals_spo2').value)] : [],
+                        skin_temperature: document.getElementById('vitals_temp').value ? [parseFloat(document.getElementById('vitals_temp').value)] : []
+                    },
+                    sleep_recovery_activity: {
+                        total_sleep_time_hours: parseFloat(document.getElementById('vitals_sleep').value) || null,
+                        steps_daily: parseInt(document.getElementById('vitals_steps').value) || null,
+                        active_minutes: parseInt(document.getElementById('vitals_active_min').value) || null,
+                        sleep_efficiency_percent: parseInt(document.getElementById('vitals_sleep_quality').value) || null
+                    }
+                };
+            }
+
+            // SOAP profile
+            const age = document.getElementById('soap_age').value;
+            const sex = document.getElementById('soap_sex').value;
+            const height = document.getElementById('soap_height').value;
+            const weight = document.getElementById('soap_weight').value;
+            
+            if (age && sex && height && weight) {
+                const selectedDiagnoses = Array.from(document.getElementById('soap_diagnoses').selectedOptions).map(o => o.value);
+                const medications = document.getElementById('soap_medications').value.split(',').map(m => m.trim()).filter(m => m);
+                const supplements = document.getElementById('soap_supplements')?.value.split(',').map(m => m.trim()).filter(m => m) || [];
+                const familyHistory = document.getElementById('soap_family_history')?.value;
+                
+                data.soap_profile = {
+                    demographics_anthropometrics: {
+                        age: parseInt(age),
+                        sex_at_birth: sex.toLowerCase(),
+                        height_cm: parseFloat(height),
+                        weight_kg: parseFloat(weight),
+                        race_ethnicity: document.getElementById('soap_ethnicity')?.value ? [document.getElementById('soap_ethnicity').value] : [],
+                        waist_circumference_cm: parseFloat(document.getElementById('soap_waist')?.value) || null,
+                        bmi: null
+                    },
+                    medical_history: {
+                        conditions: selectedDiagnoses,
+                        family_history: familyHistory ? familyHistory.split(',').map(f => f.trim()) : []
+                    },
+                    medications_supplements: {
+                        medications: medications.map(m => {
+                            const parts = m.split(' ');
+                            return {
+                                name: parts[0],
+                                dose: parts[1] || '1 unit',
+                                frequency: parts[2] || 'daily'
+                            };
+                        }),
+                        supplements: supplements.map(s => {
+                            const parts = s.split(' ');
+                            return {
+                                name: parts[0] + (parts[1] || ''),
+                                dose: parts[2] || '1 unit',
+                                frequency: 'daily'
+                            };
+                        })
+                    },
+                    diet: {
+                        pattern: document.getElementById('qual_diet').value || 'standard',
+                        sodium_intake: 'normal',
+                        hydration_intake: document.getElementById('qual_hydration').value === 'well_hydrated' ? 'high' : 'normal',
+                        caffeine: document.getElementById('qual_caffeine').value || 'moderate',
+                        alcohol: (() => {
+                            const val = document.getElementById('soap_alcohol')?.value;
+                            if (val === 'occasional') return 'low';
+                            if (val === 'moderate' || val === 'heavy') return val;
+                            return 'none';
+                        })(),
+                        meal_timing: 'consistent'
+                    },
+                    activity_lifestyle: {
+                        activity_level: document.getElementById('qual_exercise').value || 'moderate',
+                        shift_work: false,
+                        sleep_schedule_consistency: 'consistent',
+                        nicotine_tobacco: (() => {
+                            const val = document.getElementById('soap_smoking')?.value;
+                            if (val === 'never') return 'none';
+                            if (val === 'former' || val === 'current') return val;
+                            return 'none';
+                        })()
+                    },
+                    symptoms: {
+                        free_text: null,
+                        structured: []
+                    }
+                };
+            }
+
+            // Qualitative encoding
+            const stress = document.getElementById('qual_stress').value;
+            if (stress) {
+                data.qualitative_encoding = {
+                    subjective_inputs: {
+                        stress_level: stress,
+                        sleep_quality: document.getElementById('qual_sleep').value,
+                        diet_pattern: document.getElementById('qual_diet').value,
+                        caffeine_intake: document.getElementById('qual_caffeine').value,
+                        hydration_status: document.getElementById('qual_hydration').value,
+                        exercise_pattern: document.getElementById('qual_exercise').value
+                    }
+                };
+            }
+
+            // Validation
+            if (data.specimen_data.modalities_selected.length === 0) {
+                throw new Error('❌ At least one specimen modality is required (Blood, Saliva, Sweat, or Urine). Please add some analytes!');
+            }
+
+            console.log('Final Part A data structure:', JSON.stringify(data, null, 2));
+            return data;
+        }
+
+        // Run Full Pipeline
+        async function runFullPipeline() {
+            try {
+                // BULLETPROOF: Ensure authentication before starting
+                const authSuccess = await ensureAuthenticated();
+                
+                if (!authSuccess) {
+                    throw new Error('Authentication required but failed. Cannot run pipeline.');
+                }
+
+                document.getElementById('pipelineStatus').classList.remove('hidden');
+                
+                // Reset pipeline status
+                for (let i = 1; i <= 4; i++) {
+                    updatePipelineStep(i, 'Pending', '⏹');
+                }
+
+                // STEP 1: Submit Part A Data
+                updatePipelineStep(1, 'Running', '⏳');
+                showStatus('Step 1: Submitting Part A data...', 'info');
+                
+                partAData = collectFormData();
+                console.log('Part A data to submit:', JSON.stringify(partAData, null, 2));
+                
+                const response1 = await fetch(`${API_BASE}/part-a/submit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(partAData)
+                });
+
+                // BULLETPROOF: Handle 401 errors with auto-retry
+                if (response1.status === 401) {
+                    console.log('🔄 Got 401 on Part A submit, re-authenticating...');
+                    await handleAuthError();
+                    
+                    // Retry the request with new token
+                    const retryResponse = await fetch(`${API_BASE}/part-a/submit`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(partAData)
+                    });
+                    
+                    if (!retryResponse.ok) {
+                        const errorText = await retryResponse.text();
+                        throw new Error(`Part A submission failed after retry (${retryResponse.status}): ${errorText}`);
+                    }
+                    
+                    const result1 = await retryResponse.json();
+                    submissionId = result1.submission_id;
+                } else if (!response1.ok) {
+                    const errorText = await response1.text();
+                    let errorMsg;
+                    try {
+                        const errorJson = JSON.parse(errorText);
+                        console.error('Part A error details:', errorJson);
+                        
+                        // Format validation errors properly
+                        if (errorJson.detail && Array.isArray(errorJson.detail)) {
+                            errorMsg = 'Validation errors:\n' + errorJson.detail.map(err => {
+                                const loc = err.loc ? err.loc.join(' → ') : 'unknown';
+                                return `  • ${loc}: ${err.msg}`;
+                            }).join('\n');
+                        } else if (errorJson.detail) {
+                            errorMsg = JSON.stringify(errorJson.detail, null, 2);
+                        } else {
+                            errorMsg = errorJson.message || response1.statusText;
+                        }
+                    } catch {
+                        errorMsg = errorText || response1.statusText;
+                    }
+                    console.error('Part A submission failed:', response1.status, errorMsg);
+                    throw new Error(`Part A submission failed (${response1.status}):\n${errorMsg}`);
+                } else {
+                    const result1 = await response1.json();
+                    submissionId = result1.submission_id;
+                }
+                
+                updatePipelineStep(1, 'Success', '✅');
+                showStatus(`✅ Part A submitted! Submission ID: ${submissionId}`, 'success');
+
+                // STEP 2: Run A2 Data Quality Checks
+                updatePipelineStep(2, 'Running', '⏳');
+                showStatus('Step 2: Running A2 data quality checks...', 'info');
+
+                // 2a: Completeness check
+                const response2a = await fetch(`${API_BASE}/data-quality/completeness/${submissionId}`, {
+                    headers: {'Authorization': `Bearer ${token}`}
+                });
+                if (response2a.ok) {
+                    a2Data.completeness = await response2a.json();
+                }
+
+                // 2b: Gating status
+                const response2b = await fetch(`${API_BASE}/data-quality/gating-status/${submissionId}`, {
+                    headers: {'Authorization': `Bearer ${token}`}
+                });
+                if (response2b.ok) {
+                    a2Data.gating = await response2b.json();
+                }
+
+                // 2c: Priors for glucose (example)
+                const response2c = await fetch(`${API_BASE}/data-quality/priors/glucose`, {
+                    headers: {'Authorization': `Bearer ${token}`}
+                });
+                if (response2c.ok) {
+                    a2Data.priors = await response2c.json();
+                }
+
+                updatePipelineStep(2, 'Success', '✅');
+                showStatus('✅ A2 data quality checks complete!', 'success');
+                displayDebugPanel();
+
+                // STEP 3: Generate Part B Report
+                updatePipelineStep(3, 'Running', '⏳');
+                showStatus('Step 3: Generating Part B report (35 outputs)...', 'info');
+
+                const response3 = await fetch(`${API_BASE}/part-b/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({submission_id: submissionId})
+                });
+
+                if (!response3.ok) {
+                    const errorText = await response3.text();
+                    let errorDetail;
+                    try {
+                        const errorJson = JSON.parse(errorText);
+                        errorDetail = errorJson.detail || response3.statusText;
+                    } catch {
+                        errorDetail = errorText || response3.statusText;
+                    }
+                    throw new Error(`Part B generation failed: ${errorDetail}`);
+                }
+
+                const result3 = await response3.json();
+                console.log('Part B generation response:', result3);
+                
+                // Check if report was generated successfully
+                if (result3.status === 'error' || !result3.report) {
+                    const errorMsg = result3.errors?.join(', ') || 'Unknown error';
+                    throw new Error(`Part B generation failed: ${errorMsg}`);
+                }
+                
+                // Use the report directly from the generation response
+                partBReport = result3.report;
+                updatePipelineStep(3, 'Success', '✅');
+                showStatus('✅ Part B report generated!', 'success');
+
+                // STEP 4: Display Results
+                updatePipelineStep(4, 'Running', '⏳');
+                displayPartBReport();
+                updatePipelineStep(4, 'Success', '✅');
+                showStatus('✅ Pipeline complete! All results displayed below.', 'success');
+
+            } catch (error) {
+                console.error('Pipeline error:', error);
+                showStatus(`❌ Pipeline failed: ${error.message}`, 'error');
+                
+                // Mark failed step
+                const failedStep = error.message.includes('Part A') ? 1 : 
+                                   error.message.includes('A2') ? 2 : 
+                                   error.message.includes('Part B') ? 3 : 4;
+                updatePipelineStep(failedStep, 'Error', '❌');
+            }
+        }
+
+        // Display Part B Report
+        function displayPartBReport() {
+            const container = document.getElementById('outputViewer');
+            
+            if (!partBReport) {
+                container.innerHTML = '<div class="status-error">No report data available</div>';
+                return;
+            }
+
+            const report = partBReport.report || partBReport;
+            console.log('Part B report structure:', report);
+            
+            let html = '<div class="output-grid">';
+
+            // Helper to create output card
+            function createOutputCard(title, panelData) {
+                let cardHtml = `<div class="output-card"><h4>${title}</h4>`;
+                
+                const outputs = panelData?.outputs || [];
+                
+                if (outputs.length === 0) {
+                    cardHtml += '<div class="status-info">No outputs available for this panel</div>';
+                } else {
+                    outputs.forEach(item => {
+                        const confidence = item.confidence_percent || 0;
+                        const confBadge = confidence >= 70 ? 'high' : confidence >= 40 ? 'medium' : 'low';
+                        const provBadge = item.measured_vs_inferred === 'measured' ? 'measured' : 'inferred';
+                        
+                        // Extract value display
+                        let valueDisplay = 'N/A';
+                        if (item.value_score !== null && item.value_score !== undefined) {
+                            valueDisplay = item.value_score.toFixed(1);
+                        } else if (item.value_range_low !== null && item.value_range_high !== null) {
+                            valueDisplay = `${item.value_range_low.toFixed(1)} - ${item.value_range_high.toFixed(1)}`;
+                        } else if (item.value_class) {
+                            valueDisplay = item.value_class;
+                        }
+                        
+                        // Status badge
+                        const statusBadge = item.status === 'insufficient_data' ? 
+                            '<span class="badge badge-low">Insufficient Data</span>' : '';
+                        
+                        cardHtml += `
+                            <div class="output-item">
+                                <div class="output-item-name">${item.metric_name || 'Unknown'}</div>
+                                <div class="output-item-value">
+                                    ${valueDisplay}
+                                    ${item.units ? ` ${item.units}` : ''}
+                                </div>
+                                <div class="output-item-confidence">
+                                    <span class="badge badge-${confBadge}">Confidence: ${confidence.toFixed(1)}%</span>
+                                    <span class="badge badge-${provBadge}">${item.measured_vs_inferred || 'N/A'}</span>
+                                    ${statusBadge}
+                                </div>
+                                ${item.confidence_top_3_drivers && item.confidence_top_3_drivers.length > 0 ? `
+                                    <div class="output-item-drivers">
+                                        <strong>Top Drivers:</strong><br>
+                                        ${item.confidence_top_3_drivers.map(([desc, impact]) => 
+                                            `• ${desc} (${impact})`
+                                        ).join('<br>')}
+                                    </div>
+                                ` : ''}
+                                ${item.what_increases_confidence && item.what_increases_confidence.length > 0 ? `
+                                    <div class="output-item-drivers">
+                                        <strong>↑ Increases Confidence:</strong><br>
+                                        ${item.what_increases_confidence.map(x => `• ${x}`).join('<br>')}
+                                    </div>
+                                ` : ''}
+                                ${item.safe_action_suggestion ? `
+                                    <div class="output-item-action">
+                                        <strong>💡 Action:</strong> ${item.safe_action_suggestion}
+                                    </div>
+                                ` : ''}
+                                ${item.input_chain ? `
+                                    <div class="output-item-drivers" style="font-size: 0.85em; color: #666;">
+                                        <strong>Input Chain:</strong> ${item.input_chain}
+                                    </div>
+                                ` : ''}
+                                ${item.methodologies_used && item.methodologies_used.length > 0 ? `
+                                    <div class="output-item-drivers" style="font-size: 0.85em; color: #666;">
+                                        <strong>Methods:</strong> ${item.methodologies_used.join(' → ')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    });
+                }
+                
+                cardHtml += '</div>';
+                return cardHtml;
+            }
+
+            // Panel 1: Metabolic Regulation (5 outputs)
+            if (report.metabolic_regulation) {
+                html += createOutputCard(
+                    `Panel 1: ${report.metabolic_regulation.panel_display_name || 'Metabolic Regulation'} (${report.metabolic_regulation.outputs?.length || 0})`,
+                    report.metabolic_regulation
+                );
+            }
+
+            // Panel 2: Lipid & Cardiometabolic (5 outputs)
+            if (report.lipid_cardiometabolic) {
+                html += createOutputCard(
+                    `Panel 2: ${report.lipid_cardiometabolic.panel_display_name || 'Lipid & Cardiometabolic'} (${report.lipid_cardiometabolic.outputs?.length || 0})`,
+                    report.lipid_cardiometabolic
+                );
+            }
+
+            // Panel 3: Micronutrient & Vitamin (5 outputs)
+            if (report.micronutrient_vitamin) {
+                html += createOutputCard(
+                    `Panel 3: ${report.micronutrient_vitamin.panel_display_name || 'Micronutrient & Vitamin'} (${report.micronutrient_vitamin.outputs?.length || 0})`,
+                    report.micronutrient_vitamin
+                );
+            }
+
+            // Panel 4: Inflammatory & Immune (5 outputs)
+            if (report.inflammatory_immune) {
+                html += createOutputCard(
+                    `Panel 4: ${report.inflammatory_immune.panel_display_name || 'Inflammatory & Immune'} (${report.inflammatory_immune.outputs?.length || 0})`,
+                    report.inflammatory_immune
+                );
+            }
+
+            // Panel 5: Endocrine & Neurohormonal (5 outputs)
+            if (report.endocrine_neurohormonal) {
+                html += createOutputCard(
+                    `Panel 5: ${report.endocrine_neurohormonal.panel_display_name || 'Endocrine & Neurohormonal'} (${report.endocrine_neurohormonal.outputs?.length || 0})`,
+                    report.endocrine_neurohormonal
+                );
+            }
+
+            // Panel 6: Renal & Hydration (5 outputs)
+            if (report.renal_hydration) {
+                html += createOutputCard(
+                    `Panel 6: ${report.renal_hydration.panel_display_name || 'Renal & Hydration'} (${report.renal_hydration.outputs?.length || 0})`,
+                    report.renal_hydration
+                );
+            }
+
+            // Panel 7: Comprehensive Integrated (5 outputs)
+            if (report.comprehensive_integrated) {
+                html += createOutputCard(
+                    `Panel 7: ${report.comprehensive_integrated.panel_display_name || 'Comprehensive Integrated'} (${report.comprehensive_integrated.outputs?.length || 0})`,
+                    report.comprehensive_integrated
+                );
+            }
+
+            // Summary stats
+            if (report.total_outputs) {
+                html += `
+                    <div class="output-card" style="grid-column: 1 / -1; background: #f8f9fa;">
+                        <h4>📊 Report Summary</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                            <div><strong>Total Outputs:</strong> ${report.total_outputs}</div>
+                            <div><strong>Successful:</strong> <span class="badge badge-high">${report.successful_outputs}</span></div>
+                            <div><strong>Insufficient Data:</strong> <span class="badge badge-low">${report.insufficient_data_outputs || 0}</span></div>
+                            <div><strong>Average Confidence:</strong> <span class="badge badge-${report.average_confidence >= 70 ? 'high' : report.average_confidence >= 40 ? 'medium' : 'low'}">${report.average_confidence?.toFixed(1)}%</span></div>
+                            <div><strong>Generated:</strong> ${new Date(report.report_generated_at).toLocaleString()}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // Display Debug Panel
+        function displayDebugPanel() {
+            const container = document.getElementById('debugPanel');
+            
+            let html = '<div class="debug-panel">';
+            
+            // Completeness
+            if (a2Data.completeness) {
+                html += '<h5>📊 Data Completeness</h5>';
+                html += '<pre>' + JSON.stringify(a2Data.completeness, null, 2) + '</pre>';
+            }
+
+            // Gating
+            if (a2Data.gating) {
+                html += '<h5>🚦 Gating Status</h5>';
+                html += '<pre>' + JSON.stringify(a2Data.gating, null, 2) + '</pre>';
+            }
+
+            // Priors
+            if (a2Data.priors) {
+                html += '<h5>📈 Priors Data (Example: Glucose)</h5>';
+                html += '<pre>' + JSON.stringify(a2Data.priors, null, 2) + '</pre>';
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // Export Functions
+        function exportJSON(type) {
+            let data, filename;
+            
+            switch(type) {
+                case 'inputs':
+                    data = partAData;
+                    filename = `monitor_inputs_${submissionId || 'draft'}.json`;
+                    break;
+                case 'report':
+                    data = partBReport;
+                    filename = `monitor_report_${submissionId || 'draft'}.json`;
+                    break;
+                case 'provenance':
+                    data = {
+                        submission_id: submissionId,
+                        part_a: partAData,
+                        a2_checks: a2Data,
+                        part_b_report: partBReport,
+                        timestamp: new Date().toISOString()
+                    };
+                    filename = `monitor_provenance_${submissionId || 'draft'}.json`;
+                    break;
+                default:
+                    showStatus('Unknown export type', 'error');
+                    return;
+            }
+
+            if (!data) {
+                showStatus('No data available to export. Run the pipeline first.', 'warning');
+                return;
+            }
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            showStatus(`✅ Downloaded ${filename}`, 'success');
+        }
+
+        function copyToClipboard(type) {
+            let data;
+            
+            switch(type) {
+                case 'inputs':
+                    data = partAData;
+                    break;
+                case 'report':
+                    data = partBReport;
+                    break;
+                default:
+                    showStatus('Unknown copy type', 'error');
+                    return;
+            }
+
+            if (!data) {
+                showStatus('No data available to copy. Run the pipeline first.', 'warning');
+                return;
+            }
+
+            navigator.clipboard.writeText(JSON.stringify(data, null, 2))
+                .then(() => showStatus('✅ Copied to clipboard', 'success'))
+                .catch(() => showStatus('❌ Failed to copy', 'error'));
+        }
+    </script>
+</body>
+</html>

@@ -26,9 +26,10 @@ target_metadata = Base.metadata
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
     configuration = config.get_section(config.config_ini_section)
+    # Use SQLite by default like the app
     configuration["sqlalchemy.url"] = os.getenv(
         "DATABASE_URL",
-        "postgresql://postgres:postgres@localhost/monitor"
+        "sqlite:///./monitor.db"
     )
 
     context.configure(
@@ -45,9 +46,10 @@ def run_migrations_offline() -> None:
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
     configuration = config.get_section(config.config_ini_section)
+    # Use SQLite by default like the app
     configuration["sqlalchemy.url"] = os.getenv(
         "DATABASE_URL",
-        "postgresql://postgres:postgres@localhost/monitor"
+        "sqlite:///./monitor.db"
     )
 
     connectable = engine_from_config(

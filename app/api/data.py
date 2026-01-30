@@ -3,11 +3,15 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
+import logging
 from app.db.session import get_db
 from app.models import User, RawSensorData, CalibratedFeatures
 from app.features.calibration import calibrate_sensor_readings, get_calibration_metadata
 from app.features.derived import compute_derived_metric
 from app.api.deps import get_current_user
+from app.api.runs import legacy_raw_ingestion_to_runv2_adapter, store_runv2_in_db
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/data", tags=["data"])
 
@@ -72,6 +76,19 @@ def ingest_raw_data(
     db.add(raw_data)
     db.commit()
     db.refresh(raw_data)
+    
+    # COMPATIBILITY ADAPTER (M7): Wrap legacy raw data into RunV2 silently
+    try:
+        run_v2 = legacy_raw_ingestion_to_runv2_adapter(
+            user_id=current_user.id,
+            raw_record=raw_data,
+            specimen_type=request.specimen_type,
+        )
+        store_runv2_in_db(run_v2, current_user.id, db)
+        logger.info(f"Created RunV2 {run_v2.run_id} from legacy raw ingestion {raw_data.id}")
+    except Exception as e:
+        logger.warning(f"Failed to create RunV2 from legacy raw data: {str(e)}")
+        # Do not fail the original endpoint; legacy behavior must remain intact
     
     return RawDataResponse(
         id=raw_data.id,

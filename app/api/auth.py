@@ -5,6 +5,7 @@ from typing import Optional
 from app.db.session import get_db
 from app.models import User
 from app.api.security import get_password_hash, verify_password, create_access_token
+from app.api.deps import get_current_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -25,6 +26,12 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     user_id: int
     email: str
+    name: Optional[str] = None
+
+
+class ProfileResponse(BaseModel):
+    user_id: int
+    email: EmailStr
     name: Optional[str] = None
 
 
@@ -83,3 +90,14 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
         email=user.email,
         name=user.name,
     )
+
+
+@router.get("/profile", response_model=ProfileResponse)
+def get_profile(current_user: User = Depends(get_current_user)):
+    """Get current user's profile. Used for token validation."""
+    return ProfileResponse(
+        user_id=current_user.id,
+        email=current_user.email,
+        name=current_user.name,
+    )
+

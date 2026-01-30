@@ -13,12 +13,11 @@ if DATABASE_URL:
         poolclass=NullPool,
     )
 else:
-    # Development: SQLite in-memory for testing
-    DATABASE_URL = "sqlite:///:memory:"
+    # Development: SQLite file database (matches alembic.ini)
+    DATABASE_URL = "sqlite:///./monitor.db"
     engine = create_engine(
         DATABASE_URL,
         echo=os.getenv("SQL_ECHO", "false").lower() == "true",
-        poolclass=StaticPool,
         connect_args={"check_same_thread": False},
     )
 

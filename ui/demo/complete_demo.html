@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MONITOR Platform - Complete Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .panel-card { border-left: 4px solid #3b82f6; }
+        .output-item { background: linear-gradient(to right, #f0f9ff, #ffffff); }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-8 rounded-lg shadow-lg mb-8">
+            <h1 class="text-4xl font-bold mb-2">🩺 MONITOR Platform</h1>
+            <p class="text-xl opacity-90">Complete End-to-End Demo: Part A + A2 + Part B</p>
+            <p class="text-sm opacity-75 mt-2">Version: January 29, 2026 | All 35 Part B Outputs Implemented</p>
+            <div class="mt-4">
+                <a href="test_harness.html" class="inline-block bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+                    🧪 DEV MODE: Full Test Harness
+                </a>
+            </div>
+        </div>
+
+        <!-- Auth Section -->
+        <div id="auth-section" class="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 class="text-2xl font-bold mb-4">🔐 Step 1: Authentication</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Email</label>
+                    <input type="email" id="email" value="demo@monitor.local" 
+                           class="w-full border rounded px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Password</label>
+                    <input type="password" id="password" value="password123" 
+                           class="w-full border rounded px-3 py-2">
+                </div>
+            </div>
+            <div class="mt-4 flex gap-4">
+                <button onclick="signup()" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
+                    Sign Up
+                </button>
+                <button onclick="login()" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+                    Login
+                </button>
+            </div>
+            <div id="auth-status" class="mt-4"></div>
+        </div>
+
+        <!-- Part A Section -->
+        <div id="part-a-section" class="bg-white rounded-lg shadow p-6 mb-8 hidden">
+            <h2 class="text-2xl font-bold mb-4">📥 Step 2: Part A - Data Ingestion</h2>
+            <p class="text-gray-600 mb-4">Upload patient data across multiple modalities</p>
+            
+            <div class="grid grid-cols-1 gap-4">
+                <div class="border rounded p-4">
+                    <h3 class="font-bold mb-2">ISF Data (Continuous Glucose)</h3>
+                    <textarea id="isf-data" class="w-full border rounded p-2 font-mono text-sm" rows="4"
+>{"glucose": 120, "lactate": 1.2, "timestamp": "2026-01-29T10:00:00"}</textarea>
+                    <button onclick="uploadISF()" class="mt-2 bg-blue-600 text-white px-4 py-2 rounded">
+                        Upload ISF Data
+                    </button>
+                </div>
+                
+                <div class="border rounded p-4">
+                    <h3 class="font-bold mb-2">Specimen Labs (Blood/Saliva/etc)</h3>
+                    <select id="specimen-type" class="border rounded px-3 py-2 mr-2">
+                        <option>blood_capillary</option>
+                        <option>blood_venous</option>
+                        <option>saliva</option>
+                    </select>
+                    <button onclick="uploadSpecimen()" class="bg-blue-600 text-white px-4 py-2 rounded">
+                        Upload Specimen
+                    </button>
+                </div>
+                
+                <div class="border rounded p-4">
+                    <h3 class="font-bold mb-2">Vitals & SOAP Data</h3>
+                    <button onclick="uploadVitals()" class="bg-blue-600 text-white px-4 py-2 rounded mr-2">
+                        Upload Vitals
+                    </button>
+                    <button onclick="uploadSOAP()" class="bg-blue-600 text-white px-4 py-2 rounded">
+                        Upload SOAP Profile
+                    </button>
+                </div>
+            </div>
+            
+            <div id="part-a-status" class="mt-4"></div>
+        </div>
+
+        <!-- A2 Section -->
+        <div id="a2-section" class="bg-white rounded-lg shadow p-6 mb-8 hidden">
+            <h2 class="text-2xl font-bold mb-4">🔍 Step 3: A2 - Quality Backbone</h2>
+            <p class="text-gray-600 mb-4">Check data quality, gating, and priors</p>
+            
+            <div class="grid grid-cols-3 gap-4">
+                <button onclick="checkCompleteness()" class="bg-purple-600 text-white px-4 py-3 rounded hover:bg-purple-700">
+                    Check Data Completeness
+                </button>
+                <button onclick="checkGating()" class="bg-purple-600 text-white px-4 py-3 rounded hover:bg-purple-700">
+                    Check Quality Gating
+                </button>
+                <button onclick="checkPriors()" class="bg-purple-600 text-white px-4 py-3 rounded hover:bg-purple-700">
+                    View Population Priors
+                </button>
+            </div>
+            
+            <div id="a2-status" class="mt-4"></div>
+        </div>
+
+        <!-- Part B Section -->
+        <div id="part-b-section" class="bg-white rounded-lg shadow p-6 mb-8 hidden">
+            <h2 class="text-2xl font-bold mb-4">📊 Step 4: Part B - Generate Report (All 35 Outputs)</h2>
+            <button onclick="generatePartB()" class="bg-green-600 text-white px-8 py-4 rounded-lg text-lg font-bold hover:bg-green-700">
+                🚀 Generate Complete Part B Report
+            </button>
+            <div id="part-b-status" class="mt-4"></div>
+        </div>
+
+        <!-- Results Display -->
+        <div id="results-section" class="hidden">
+            <div class="bg-gradient-to-r from-green-600 to-emerald-600 text-white p-6 rounded-lg shadow-lg mb-8">
+                <h2 class="text-3xl font-bold">✅ Part B Report Generated Successfully!</h2>
+                <p class="text-lg opacity-90 mt-2" id="report-summary"></p>
+            </div>
+            
+            <div id="panels-container"></div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loading" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <div class="bg-white rounded-lg p-8 text-center">
+                <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
+                <p class="text-lg font-bold">Processing...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Construct API base URL properly for GitHub Codespaces
+        const API_BASE = window.location.hostname.includes('github.dev') 
+            ? 'https://' + window.location.hostname.replace('-3000.app.github.dev', '-8000.app.github.dev')
+            : 'http://localhost:8000';
+        
+        console.log('API_BASE:', API_BASE);
+        
+        let token = null;
+        let userId = null;
+        let submissionId = null;
+
+        function showLoading() { document.getElementById('loading').classList.remove('hidden'); }
+        function hideLoading() { document.getElementById('loading').classList.add('hidden'); }
+        
+        function showStatus(elementId, message, type) {
+            const el = document.getElementById(elementId);
+            const colors = {success: 'green', error: 'red', info: 'blue'};
+            el.innerHTML = `<div class="mt-4 p-4 rounded bg-${colors[type]}-100 text-${colors[type]}-800">${message}</div>`;
+        }
+
+        async function signup() {
+            showLoading();
+            try {
+                const res = await fetch(`${API_BASE}/auth/signup`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        email: document.getElementById('email').value,
+                        password: document.getElementById('password').value,
+                        name: 'Demo User'
+                    })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    token = data.access_token;
+                    userId = data.user_id;
+                    showStatus('auth-status', '✅ Signed up successfully!', 'success');
+                    document.getElementById('part-a-section').classList.remove('hidden');
+                } else {
+                    showStatus('auth-status', '❌ ' + JSON.stringify(data), 'error');
+                }
+            } catch (e) {
+                showStatus('auth-status', '❌ Error: ' + e.message, 'error');
+            }
+            hideLoading();
+        }
+
+        async function login() {
+            showLoading();
+            try {
+                const res = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        email: document.getElementById('email').value,
+                        password: document.getElementById('password').value
+                    })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    token = data.access_token;
+                    userId = data.user_id;
+                    showStatus('auth-status', '✅ Logged in successfully!', 'success');
+                    document.getElementById('part-a-section').classList.remove('hidden');
+                    document.getElementById('a2-section').classList.remove('hidden');
+                    document.getElementById('part-b-section').classList.remove('hidden');
+                } else {
+                    showStatus('auth-status', '❌ ' + JSON.stringify(data), 'error');
+                }
+            } catch (e) {
+                showStatus('auth-status', '❌ Error: ' + e.message, 'error');
+            }
+            hideLoading();
+        }
+
+        async function uploadISF() {
+            showLoading();
+            try {
+                const res = await fetch(`${API_BASE}/part-a/isf`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        submission_id: submissionId || 'demo-sub-' + Date.now(),
+                        records: [JSON.parse(document.getElementById('isf-data').value)]
+                    })
+                });
+                const data = await res.json();
+                submissionId = data.submission_id || submissionId;
+                showStatus('part-a-status', '✅ ISF data uploaded! Submission: ' + submissionId, 'success');
+                document.getElementById('a2-section').classList.remove('hidden');
+                document.getElementById('part-b-section').classList.remove('hidden');
+            } catch (e) {
+                showStatus('part-a-status', '❌ Error: ' + e.message, 'error');
+            }
+            hideLoading();
+        }
+
+        async function uploadSpecimen() {
+            showStatus('part-a-status', 'ℹ️ Specimen upload demo - would call POST /part-a/specimens', 'info');
+        }
+
+        async function uploadVitals() {
+            showStatus('part-a-status', 'ℹ️ Vitals upload demo - would call POST /part-a/vitals', 'info');
+        }
+
+        async function uploadSOAP() {
+            showStatus('part-a-status', 'ℹ️ SOAP upload demo - would call POST /part-a/soap', 'info');
+        }
+
+        async function checkCompleteness() {
+            showStatus('a2-status', 'ℹ️ Would call GET /data-quality/completeness/{submission_id}', 'info');
+        }
+
+        async function checkGating() {
+            showStatus('a2-status', 'ℹ️ Would call GET /data-quality/gating-status/{submission_id}', 'info');
+        }
+
+        async function checkPriors() {
+            showLoading();
+            try {
+                const res = await fetch(`${API_BASE}/data-quality/priors/glucose`, {
+                    headers: {'Authorization': `Bearer ${token}`}
+                });
+                const data = await res.json();
+                showStatus('a2-status', '✅ Priors loaded: ' + JSON.stringify(data, null, 2), 'success');
+            } catch (e) {
+                showStatus('a2-status', '❌ Error: ' + e.message, 'error');
+            }
+            hideLoading();
+        }
+
+        async function generatePartB() {
+            if (!submissionId) {
+                showStatus('part-b-status', '❌ Please upload Part A data first!', 'error');
+                return;
+            }
+            
+            showLoading();
+            try {
+                const res = await fetch(`${API_BASE}/part-b/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        submission_id: submissionId,
+                        time_window_days: 30
+                    })
+                });
+                const data = await res.json();
+                
+                if (res.ok && data.report) {
+                    displayReport(data.report);
+                    document.getElementById('results-section').classList.remove('hidden');
+                    showStatus('part-b-status', '✅ Report generated successfully!', 'success');
+                } else {
+                    showStatus('part-b-status', '❌ Error: ' + JSON.stringify(data), 'error');
+                }
+            } catch (e) {
+                showStatus('part-b-status', '❌ Error: ' + e.message, 'error');
+            }
+            hideLoading();
+        }
+
+        function displayReport(report) {
+            document.getElementById('report-summary').textContent = 
+                `${report.panels.length} panels, ${report.total_outputs} total outputs, ${report.successful_outputs} successful`;
+            
+            const container = document.getElementById('panels-container');
+            container.innerHTML = '';
+            
+            report.panels.forEach(panel => {
+                const panelDiv = document.createElement('div');
+                panelDiv.className = 'panel-card bg-white rounded-lg shadow-lg p-6 mb-6';
+                panelDiv.innerHTML = `
+                    <h3 class="text-2xl font-bold text-blue-900 mb-4">${panel.panel_display_name}</h3>
+                    <p class="text-gray-600 mb-4">${panel.summary_notes || ''}</p>
+                    <div class="space-y-4">
+                        ${panel.outputs.map(output => `
+                            <div class="output-item border rounded-lg p-4">
+                                <div class="flex justify-between items-start mb-2">
+                                    <h4 class="font-bold text-lg">${output.output_display_name}</h4>
+                                    <div class="flex gap-2">
+                                        <span class="px-3 py-1 rounded text-sm ${output.measured_vs_inferred === 'measured' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}">
+                                            ${output.measured_vs_inferred}
+                                        </span>
+                                        <span class="px-3 py-1 rounded text-sm font-bold bg-purple-100 text-purple-800">
+                                            ${output.confidence_percent}% confidence
+                                        </span>
+                                    </div>
+                                </div>
+                                <p class="text-2xl font-bold text-gray-900 mb-3">${output.value}</p>
+                                <div class="text-sm space-y-2">
+                                    <div><strong>Top Drivers:</strong> ${output.top_3_drivers_of_confidence.join(', ')}</div>
+                                    <div><strong>Methodologies:</strong> ${output.methodologies_used.join(', ')}</div>
+                                    <div><strong>Safe Action:</strong> ${output.safe_action_suggestion}</div>
+                                    <div><strong>Increase Confidence:</strong> ${output.what_increases_confidence}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(panelDiv);
+            });
+        }
+    </script>
+</body>
+</html>
