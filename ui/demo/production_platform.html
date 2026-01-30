@@ -3145,21 +3145,65 @@
                             <p style="color: #666; margin-bottom: 15px;">${panelData.summary_notes || ''}</p>`;
                         
                         panelData.outputs.forEach(output => {
-                            html += `<div class="output-item" style="margin-bottom: 20px; padding: 15px; background: #fafafa; border-left: 3px solid #007bff; border-radius: 3px;">
+                            // Part 4A: NULL-as-bug enforcement with deterministic fallback rendering
+                            const status = output.status || 'computed';
+                            const confidence = output.confidence_percent || 0;
+                            const isInsufficient = status === 'insufficient_data' || confidence < 55;
+                            
+                            // Determine border color based on status
+                            const borderColor = isInsufficient ? '#ffc107' : (confidence >= 75 ? '#28a745' : '#007bff');
+                            const bgColor = isInsufficient ? '#fff8e1' : '#fafafa';
+                            
+                            html += `<div class="output-item" style="margin-bottom: 20px; padding: 15px; background: ${bgColor}; border-left: 3px solid ${borderColor}; border-radius: 3px;">
                                 <h5 style="margin: 0 0 10px 0; color: #333;">${output.metric_name.replace(/_/g, ' ').toUpperCase()}</h5>`;
                             
-                            if (output.value_range_low !== undefined && output.value_range_high !== undefined) {
-                                html += `<div style="font-size: 18px; font-weight: bold; color: #007bff; margin: 5px 0;">
+                            // Part 4A: Priority-based rendering with guaranteed output
+                            // Priority 1: Range (LAB_PROXY_RANGE)
+                            if (output.value_range_low !== undefined && output.value_range_high !== undefined && 
+                                output.value_range_low !== null && output.value_range_high !== null) {
+                                html += `<div style="font-size: 18px; font-weight: bold; color: ${borderColor}; margin: 5px 0;">
                                     ${output.value_range_low} - ${output.value_range_high} ${output.units || ''}</div>`;
                             }
+                            // Priority 2: Score (INDEX_SCORE)
+                            else if (output.value_score !== undefined && output.value_score !== null) {
+                                const band = output.value_score >= 75 ? 'Good' : output.value_score >= 50 ? 'Fair' : 'Low';
+                                html += `<div style="font-size: 18px; font-weight: bold; color: ${borderColor}; margin: 5px 0;">
+                                    Score: ${output.value_score}/100 (${band})</div>`;
+                            }
+                            // Priority 3: Probability (PROBABILITY)
+                            else if ((output.prob_low !== undefined && output.prob_high !== undefined) || output.probability_value !== undefined) {
+                                const low = output.prob_low || (output.probability_value ? output.probability_value - 5 : 0);
+                                const high = output.prob_high || (output.probability_value ? output.probability_value + 5 : 100);
+                                html += `<div style="font-size: 18px; font-weight: bold; color: ${borderColor}; margin: 5px 0;">
+                                    Probability: ${Math.max(0, low).toFixed(1)}% - ${Math.min(100, high).toFixed(1)}%</div>`;
+                            }
+                            // Priority 4: Classification (CLASSIFICATION)
+                            else if (output.class_label && output.class_label !== '') {
+                                html += `<div style="font-size: 18px; font-weight: bold; color: ${borderColor}; margin: 5px 0;">
+                                    Pattern: ${output.class_label}</div>`;
+                            }
+                            // Priority 5: Trend (TREND)
+                            else if (output.trend_label && output.trend_label !== '') {
+                                html += `<div style="font-size: 18px; font-weight: bold; color: ${borderColor}; margin: 5px 0;">
+                                    Trajectory: ${output.trend_label}</div>`;
+                            }
+                            // Priority 6: insufficient_fallback (ALWAYS renders something)
+                            else {
+                                html += `<div style="font-size: 16px; font-weight: 600; color: #856404; margin: 5px 0;">
+                                    ⚠️ Exploratory Signal Only</div>
+                                    <div style="font-size: 14px; color: #856404; margin: 5px 0;">
+                                    Insufficient data for precise estimate</div>`;
+                            }
                             
+                            // Confidence badge
                             html += `<div style="margin: 10px 0;">
-                                <span style="padding: 4px 8px; background: ${output.confidence_percent >= 75 ? '#d4edda' : output.confidence_percent >= 50 ? '#fff3cd' : '#f8d7da'}; 
+                                <span style="padding: 4px 8px; background: ${confidence >= 75 ? '#d4edda' : confidence >= 55 ? '#fff3cd' : '#f8d7da'}; 
                                       border-radius: 3px; font-size: 13px; font-weight: 600;">
-                                    ${output.measured_vs_inferred} | Confidence: ${(output.confidence_percent || 0).toFixed(1)}%
+                                    ${output.measured_vs_inferred || 'inferred'} | Confidence: ${confidence.toFixed(1)}%
                                 </span>
                             </div>`;
                             
+                            // Top drivers (if available)
                             if (output.confidence_top_3_drivers && output.confidence_top_3_drivers.length > 0) {
                                 html += '<div style="margin: 10px 0;"><strong>Top Drivers:</strong><ul style="margin: 5px 0;">';
                                 output.confidence_top_3_drivers.forEach(([driver, impact]) => {
@@ -3168,15 +3212,33 @@
                                 html += '</ul></div>';
                             }
                             
+                            // Part 4A: Always show what increases confidence (remediation)
+                            if (output.what_increases_confidence && output.what_increases_confidence.length > 0) {
+                                html += '<div style="margin: 10px 0; padding: 10px; background: #e3f2fd; border-radius: 3px;">';
+                                html += '<strong>📊 What Would Increase Confidence:</strong><ul style="margin: 5px 0;">';
+                                output.what_increases_confidence.forEach(item => {
+                                    html += `<li>${item}</li>`;
+                                });
+                                html += '</ul></div>';
+                            }
+                            
+                            // Safe action suggestion
                             if (output.safe_action_suggestion) {
                                 html += `<div style="margin: 10px 0; padding: 10px; background: #e7f3ff; border-radius: 3px;">
                                     <strong>💡 Suggestion:</strong> ${output.safe_action_suggestion}</div>`;
                             }
                             
+                            // Methods used
                             if (output.methodologies_used && output.methodologies_used.length > 0) {
                                 html += '<div style="margin: 10px 0; font-size: 12px; color: #666;"><strong>Methods:</strong> ';
                                 html += output.methodologies_used.slice(0, 4).join(', ');
                                 html += '</div>';
+                            }
+                            
+                            // Input chain (for transparency)
+                            if (output.input_chain) {
+                                html += `<div style="margin: 10px 0; font-size: 11px; color: #999;">
+                                    <strong>Input Chain:</strong> ${output.input_chain}</div>`;
                             }
                             
                             html += '</div>';
