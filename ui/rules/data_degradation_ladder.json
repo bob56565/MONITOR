@@ -1,0 +1,117 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Data Degradation Ladder - Deterministic Insufficient-Data Handling",
+  "description": "Formal, predictable, explainable insufficient-data degradation ladder that modifies confidence, range width, and display strategy without hiding outputs. NEVER produces NULL if confidence > 0.",
+  "version": "1.0.0",
+  "tiers": [
+    {
+      "tier": "full",
+      "description": "Optimal data adequacy - full rendering with nominal confidence and range precision",
+      "criteria": {
+        "data_adequacy_min": 0.80,
+        "missing_rate_max": 0.20,
+        "conflicts_max": 0,
+        "min_days_covered": 7
+      },
+      "confidence_multiplier": 1.00,
+      "range_uncertainty_multiplier": 1.00,
+      "allowed_display_strategies": [
+        "LAB_RANGE_PROXY",
+        "PROBABILITY_ABNORMAL",
+        "PHYSIOLOGIC_PHENOTYPE",
+        "COMPOSITE_INDEX"
+      ],
+      "forced_rules": []
+    },
+    {
+      "tier": "partial",
+      "description": "Moderate data adequacy - slight confidence and precision degradation",
+      "criteria": {
+        "data_adequacy_min": 0.60,
+        "missing_rate_max": 0.35,
+        "conflicts_max": 1,
+        "min_days_covered": 5
+      },
+      "confidence_multiplier": 0.75,
+      "range_uncertainty_multiplier": 1.25,
+      "allowed_display_strategies": [
+        "LAB_RANGE_PROXY",
+        "PROBABILITY_ABNORMAL",
+        "PHYSIOLOGIC_PHENOTYPE",
+        "COMPOSITE_INDEX"
+      ],
+      "forced_rules": [
+        "Add explainability flag: 'Moderate data coverage - wider uncertainty bounds applied'",
+        "Cap drivers list at 3"
+      ]
+    },
+    {
+      "tier": "minimal",
+      "description": "Minimal data adequacy - significant confidence penalty and range widening",
+      "criteria": {
+        "data_adequacy_min": 0.40,
+        "missing_rate_max": 0.50,
+        "conflicts_max": 2,
+        "min_days_covered": 3
+      },
+      "confidence_multiplier": 0.50,
+      "range_uncertainty_multiplier": 1.60,
+      "allowed_display_strategies": [
+        "PROBABILITY_ABNORMAL",
+        "PHYSIOLOGIC_PHENOTYPE",
+        "COMPOSITE_INDEX"
+      ],
+      "forced_rules": [
+        "LAB_RANGE_PROXY: widen bounds to physiologically plausible max range; if exceeds, degrade to classification-only",
+        "Cap drivers list at 2",
+        "Add explainability flag: 'Minimal data coverage - exploratory estimate only'",
+        "Favor qualitative bands over numeric precision"
+      ]
+    },
+    {
+      "tier": "exploratory_only",
+      "description": "Insufficient data - exploratory signal with maximum uncertainty and lowest confidence",
+      "criteria": {
+        "data_adequacy_min": 0.0,
+        "missing_rate_max": 1.0,
+        "conflicts_max": 999,
+        "min_days_covered": 0
+      },
+      "confidence_multiplier": 0.30,
+      "range_uncertainty_multiplier": 2.00,
+      "allowed_display_strategies": [
+        "PHYSIOLOGIC_PHENOTYPE",
+        "COMPOSITE_INDEX"
+      ],
+      "forced_rules": [
+        "Headline must avoid numeric precision - use qualitative label only",
+        "Show confidence band in lowest category: '0-54.9%: Exploratory signal only'",
+        "Add explainability flag: 'Insufficient anchors - exploratory estimate based on population priors'",
+        "Must include 'what_to_measure_next' guidance",
+        "Cap drivers list at 1 or show 'population prior' as single driver"
+      ]
+    }
+  ],
+  "tier_selection_algorithm": {
+    "description": "Deterministic tier selection based on A2 stream_coverage + gating + conflicts",
+    "steps": [
+      "1. Extract relevant stream metrics from A2 summary (days_covered, missing_rate, quality_score)",
+      "2. Extract conflict count from A2 conflict_flags array",
+      "3. Compute weighted data_adequacy from required streams (per metric dependency map)",
+      "4. Match criteria from highest tier (full) to lowest (exploratory_only)",
+      "5. Select first tier where ALL criteria are satisfied",
+      "6. If no tier matches, default to exploratory_only"
+    ],
+    "data_adequacy_formula": "weighted_average(quality_score of required_streams, weights=min_days_covered)"
+  },
+  "audit_requirements": {
+    "must_log": [
+      "Selected tier",
+      "Triggering criteria values (data_adequacy, missing_rate, conflicts)",
+      "Applied confidence multiplier",
+      "Applied range uncertainty multiplier",
+      "Forced rules triggered"
+    ],
+    "trace_field": "degradation"
+  }
+}

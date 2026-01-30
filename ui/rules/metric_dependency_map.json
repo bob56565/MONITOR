@@ -1,0 +1,1357 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Metric Dependency Map - ALL 35 METRICS (Grounded in Actual Repo Streams)",
+  "description": "Explicit raw-input→metric dependency mapping derived from actual repo ingestion schema, A2 processor stream_coverage, and Part B metric definitions. NO INVENTED STREAMS.",
+  "version": "1.0.0",
+  "streams_available": [
+    "glucose",
+    "lactate",
+    "vitals",
+    "sleep",
+    "pros",
+    "labs"
+  ],
+  "metrics": {
+    "estimated_hba1c_range": {
+      "metric_id": "estimated_hba1c_range",
+      "required_inputs": [
+        {
+          "stream": "glucose",
+          "min_days_covered": 7,
+          "max_missing_rate": 0.30,
+          "min_quality_score": 0.60,
+          "notes": "Primary anchor for A1c estimation via avg glucose"
+        }
+      ],
+      "optional_inputs": [
+        {
+          "stream": "labs",
+          "benefit": "Direct A1c measurement anchors estimate",
+          "notes": "If available within 90 days"
+        },
+        {
+          "stream": "lactate",
+          "benefit": "Metabolic context improves confidence",
+          "notes": "Optional amplifier"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "mean_glucose",
+          "source": "A2_deterministic_calculator",
+          "notes": "Simple mean over window"
+        },
+        {
+          "name": "glucose_variability_cv",
+          "source": "A2_feature_extractor",
+          "notes": "Coefficient of variation"
+        }
+      ],
+      "dependency_type": "CONSTRAINED_INFERENCE",
+      "fallback_behavior": {
+        "when_required_missing": "render_wide_bounds_and_low_confidence",
+        "confidence_floor": 0.30,
+        "confidence_penalty": 0.20,
+        "display_strategy": "LAB_RANGE_PROXY",
+        "explainability_flags": ["INSUFFICIENT_GLUCOSE_COVERAGE"]
+      }
+    },
+    "insulin_resistance_probability": {
+      "metric_id": "insulin_resistance_probability",
+      "required_inputs": [
+        {
+          "stream": "glucose",
+          "min_days_covered": 7,
+          "max_missing_rate": 0.35,
+          "min_quality_score": 0.50,
+          "notes": "Glucose patterns primary signal"
+        }
+      ],
+      "optional_inputs": [
+        {
+          "stream": "vitals",
+          "benefit": "BMI, waist, BP improve IR model",
+          "notes": "Anthropometric anchors"
+        },
+        {
+          "stream": "labs",
+          "benefit": "Direct HOMA-IR if available",
+          "notes": "Insulin + fasting glucose"
+        },
+        {
+          "stream": "lactate",
+          "benefit": "Metabolic inflexibility signal",
+          "notes": "Optional"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "postprandial_excursion_amplitude",
+          "source": "A2_feature_extractor",
+          "notes": "Peak-trough glucose post-meals"
+        },
+        {
+          "name": "fasting_glucose_proxy",
+          "source": "A2_feature_extractor",
+          "notes": "Overnight nadir glucose"
+        }
+      ],
+      "dependency_type": "CONSTRAINED_INFERENCE",
+      "fallback_behavior": {
+        "when_required_missing": "render_wide_bounds_and_low_confidence",
+        "confidence_floor": 0.25,
+        "confidence_penalty": 0.25,
+        "display_strategy": "PROBABILITY_ABNORMAL",
+        "explainability_flags": ["INSUFFICIENT_GLUCOSE_FOR_IR_MODEL"]
+      }
+    },
+    "metabolic_flexibility_score": {
+      "metric_id": "metabolic_flexibility_score",
+      "required_inputs": [
+        {
+          "stream": "glucose",
+          "min_days_covered": 5,
+          "max_missing_rate": 0.40,
+          "min_quality_score": 0.50,
+          "notes": "Fuel-switching patterns"
+        },
+        {
+          "stream": "lactate",
+          "min_days_covered": 3,
+          "max_missing_rate": 0.50,
+          "min_quality_score": 0.40,
+          "notes": "Lactate response to metabolic stress"
+        }
+      ],
+      "optional_inputs": [
+        {
+          "stream": "vitals",
+          "benefit": "HR variability adds autonomic context",
+          "notes": "Optional"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "glucose_lactate_coupling",
+          "source": "A2_feature_extractor",
+          "notes": "Cross-stream correlation"
+        },
+        {
+          "name": "fasting_to_fed_transition_rate",
+          "source": "A2_feature_extractor",
+          "notes": "Fuel-switching speed"
+        }
+      ],
+      "dependency_type": "MODEL_ASSISTED_SYNTHESIS",
+      "fallback_behavior": {
+        "when_required_missing": "render_classification_only",
+        "confidence_floor": 0.20,
+        "confidence_penalty": 0.30,
+        "display_strategy": "COMPOSITE_INDEX",
+        "explainability_flags": ["INSUFFICIENT_LACTATE_FOR_FLEXIBILITY"]
+      }
+    },
+    "postprandial_dysregulation_phenotype": {
+      "metric_id": "postprandial_dysregulation_phenotype",
+      "required_inputs": [
+        {
+          "stream": "glucose",
+          "min_days_covered": 7,
+          "max_missing_rate": 0.30,
+          "min_quality_score": 0.60,
+          "notes": "Postprandial excursion patterns"
+        }
+      ],
+      "optional_inputs": [
+        {
+          "stream": "pros",
+          "benefit": "Meal timing logs improve classification",
+          "notes": "Optional"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "postprandial_peak_timing",
+          "source": "A2_feature_extractor",
+          "notes": "Time to peak after meal"
+        },
+        {
+          "name": "return_to_baseline_rate",
+          "source": "A2_feature_extractor",
+          "notes": "Clearance speed"
+        }
+      ],
+      "dependency_type": "CONSTRAINED_INFERENCE",
+      "fallback_behavior": {
+        "when_required_missing": "render_classification_only",
+        "confidence_floor": 0.25,
+        "confidence_penalty": 0.25,
+        "display_strategy": "PHYSIOLOGIC_PHENOTYPE",
+        "explainability_flags": ["INSUFFICIENT_POSTPRANDIAL_DATA"]
+      }
+    },
+    "prediabetes_trajectory_class": {
+      "metric_id": "prediabetes_trajectory_class",
+      "required_inputs": [
+        {
+          "stream": "glucose",
+          "min_days_covered": 14,
+          "max_missing_rate": 0.25,
+          "min_quality_score": 0.65,
+          "notes": "Longitudinal glucose trend required"
+        }
+      ],
+      "optional_inputs": [
+        {
+          "stream": "labs",
+          "benefit": "Prior A1c provides trajectory anchor",
+          "notes": "Historical labs"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "glucose_trend_slope",
+          "source": "A2_feature_extractor",
+          "notes": "Linear trend over window"
+        },
+        {
+          "name": "fasting_glucose_trend",
+          "source": "A2_feature_extractor",
+          "notes": "Overnight nadir trend"
+        }
+      ],
+      "dependency_type": "CONSTRAINED_INFERENCE",
+      "fallback_behavior": {
+        "when_required_missing": "render_exploratory_only",
+        "confidence_floor": 0.20,
+        "confidence_penalty": 0.30,
+        "display_strategy": "PHYSIOLOGIC_PHENOTYPE",
+        "explainability_flags": ["INSUFFICIENT_LONGITUDINAL_DATA"]
+      }
+    },
+    "ldl_pattern_risk_proxy": {
+      "metric_id": "ldl_pattern_risk_proxy",
+      "required_inputs": [
+        {
+          "stream": "glucose",
+          "min_days_covered": 5,
+          "max_missing_rate": 0.40,
+          "min_quality_score": 0.50,
+          "notes": "Glucose-lipid metabolism link"
+        }
+      ],
+      "optional_inputs": [
+        {
+          "stream": "labs",
+          "benefit": "Direct LDL-C measurement anchors estimate",
+          "notes": "Lipid panel within 90 days"
+        },
+        {
+          "stream": "vitals",
+          "benefit": "BMI, BP add CV risk context",
+          "notes": "Optional"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "triglyceride_proxy",
+          "source": "PartB_generator",
+          "notes": "Estimated from glucose patterns"
+        },
+        {
+          "name": "hdl_proxy",
+          "source": "PartB_generator",
+          "notes": "Estimated from activity/vitals"
+        }
+      ],
+      "dependency_type": "CONSTRAINED_INFERENCE",
+      "fallback_behavior": {
+        "when_required_missing": "render_wide_bounds_and_low_confidence",
+        "confidence_floor": 0.25,
+        "confidence_penalty": 0.25,
+        "display_strategy": "LAB_RANGE_PROXY",
+        "explainability_flags": ["NO_DIRECT_LIPID_MEASUREMENT"]
+      }
+    },
+    "hdl_functional_likelihood": {
+      "metric_id": "hdl_functional_likelihood",
+      "required_inputs": [
+        {
+          "stream": "vitals",
+          "min_days_covered": 3,
+          "max_missing_rate": 0.40,
+          "min_quality_score": 0.50,
+          "notes": "Activity/HR as HDL functional proxy"
+        }
+      ],
+      "optional_inputs": [
+        {
+          "stream": "labs",
+          "benefit": "Direct HDL-C measurement",
+          "notes": "Lipid panel"
+        },
+        {
+          "stream": "glucose",
+          "benefit": "Metabolic context",
+          "notes": "Optional"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "activity_volume_proxy",
+          "source": "A2_feature_extractor",
+          "notes": "From vitals HR patterns"
+        }
+      ],
+      "dependency_type": "CONSTRAINED_INFERENCE",
+      "fallback_behavior": {
+        "when_required_missing": "render_wide_bounds_and_low_confidence",
+        "confidence_floor": 0.25,
+        "confidence_penalty": 0.25,
+        "display_strategy": "LAB_RANGE_PROXY",
+        "explainability_flags": ["NO_DIRECT_HDL_MEASUREMENT"]
+      }
+    },
+    "triglyceride_elevation_probability": {
+      "metric_id": "triglyceride_elevation_probability",
+      "required_inputs": [
+        {
+          "stream": "glucose",
+          "min_days_covered": 7,
+          "max_missing_rate": 0.35,
+          "min_quality_score": 0.55,
+          "notes": "Glucose-TG coupling well-established"
+        }
+      ],
+      "optional_inputs": [
+        {
+          "stream": "labs",
+          "benefit": "Direct TG measurement",
+          "notes": "Lipid panel"
+        },
+        {
+          "stream": "vitals",
+          "benefit": "BMI/waist circumference",
+          "notes": "Anthropometric context"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "postprandial_lipemia_proxy",
+          "source": "A2_feature_extractor",
+          "notes": "From glucose excursions"
+        }
+      ],
+      "dependency_type": "CONSTRAINED_INFERENCE",
+      "fallback_behavior": {
+        "when_required_missing": "render_wide_bounds_and_low_confidence",
+        "confidence_floor": 0.25,
+        "confidence_penalty": 0.25,
+        "display_strategy": "PROBABILITY_ABNORMAL",
+        "explainability_flags": ["NO_DIRECT_TG_MEASUREMENT"]
+      }
+    },
+    "atherogenic_risk_phenotype": {
+      "metric_id": "atherogenic_risk_phenotype",
+      "required_inputs": [
+        {
+          "stream": "glucose",
+          "min_days_covered": 5,
+          "max_missing_rate": 0.40,
+          "min_quality_score": 0.50,
+          "notes": "Metabolic-lipid coupling"
+        },
+        {
+          "stream": "vitals",
+          "min_days_covered": 3,
+          "max_missing_rate": 0.40,
+          "min_quality_score": 0.50,
+          "notes": "BP, BMI for CV risk"
+        }
+      ],
+      "optional_inputs": [
+        {
+          "stream": "labs",
+          "benefit": "Direct lipid panel",
+          "notes": "Non-HDL, Apo B if available"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "non_hdl_proxy",
+          "source": "PartB_generator",
+          "notes": "From LDL + TG proxies"
+        }
+      ],
+      "dependency_type": "MODEL_ASSISTED_SYNTHESIS",
+      "fallback_behavior": {
+        "when_required_missing": "render_classification_only",
+        "confidence_floor": 0.20,
+        "confidence_penalty": 0.30,
+        "display_strategy": "PHYSIOLOGIC_PHENOTYPE",
+        "explainability_flags": ["NO_DIRECT_LIPID_ATHEROGENIC_MARKERS"]
+      }
+    },
+    "cardiometabolic_risk_score": {
+      "metric_id": "cardiometabolic_risk_score",
+      "required_inputs": [
+        {
+          "stream": "glucose",
+          "min_days_covered": 5,
+          "max_missing_rate": 0.40,
+          "min_quality_score": 0.50,
+          "notes": "Metabolic component"
+        },
+        {
+          "stream": "vitals",
+          "min_days_covered": 3,
+          "max_missing_rate": 0.40,
+          "min_quality_score": 0.50,
+          "notes": "BP, HR, BMI components"
+        }
+      ],
+      "optional_inputs": [
+        {
+          "stream": "labs",
+          "benefit": "Direct lipid/glucose labs",
+          "notes": "Improves score accuracy"
+        },
+        {
+          "stream": "pros",
+          "benefit": "Age, smoking status, family history",
+          "notes": "SOAP profile data"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "framingham_style_inputs",
+          "source": "PartB_generator",
+          "notes": "Age, BP, glucose, lipids composite"
+        }
+      ],
+      "dependency_type": "MODEL_ASSISTED_SYNTHESIS",
+      "fallback_behavior": {
+        "when_required_missing": "render_classification_only",
+        "confidence_floor": 0.25,
+        "confidence_penalty": 0.25,
+        "display_strategy": "COMPOSITE_INDEX",
+        "explainability_flags": ["PARTIAL_FRAMINGHAM_INPUTS"]
+      }
+    },
+    "metabolic_inflammatory_coupling_index": {
+      "metric_id": "metabolic_inflammatory_coupling_index",
+      "required_inputs": [
+        {
+          "stream": "glucose",
+          "min_days_covered": 5,
+          "max_missing_rate": 0.40,
+          "min_quality_score": 0.50,
+          "notes": "Metabolic state"
+        }
+      ],
+      "optional_inputs": [
+        {
+          "stream": "lactate",
+          "benefit": "Metabolic stress marker",
+          "notes": "Optional"
+        },
+        {
+          "stream": "pros",
+          "benefit": "Subjective inflammation markers",
+          "notes": "Pain, fatigue scores"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "glucose_variability_as_stress_proxy",
+          "source": "A2_feature_extractor",
+          "notes": "CV, MAGE"
+        },
+        {
+          "name": "inflammatory_proxy_from_pros",
+          "source": "PartB_generator",
+          "notes": "SOAP inflammation signals"
+        }
+      ],
+      "dependency_type": "MODEL_ASSISTED_SYNTHESIS",
+      "fallback_behavior": {
+        "when_required_missing": "render_exploratory_only",
+        "confidence_floor": 0.20,
+        "confidence_penalty": 0.30,
+        "display_strategy": "COMPOSITE_INDEX",
+        "explainability_flags": ["NO_DIRECT_INFLAMMATORY_MARKERS"]
+      }
+    },
+    "vitamin_d_sufficiency_likelihood": {
+      "metric_id": "vitamin_d_sufficiency_likelihood",
+      "required_inputs": [],
+      "optional_inputs": [
+        {
+          "stream": "labs",
+          "benefit": "Direct 25-OH Vitamin D measurement",
+          "notes": "Primary signal"
+        },
+        {
+          "stream": "pros",
+          "benefit": "Season, geography, sun exposure",
+          "notes": "SOAP profile context"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "population_priors",
+          "source": "PartB_generator",
+          "notes": "Age, latitude, season priors"
+        }
+      ],
+      "dependency_type": "CONSTRAINED_INFERENCE",
+      "fallback_behavior": {
+        "when_required_missing": "render_wide_bounds_and_low_confidence",
+        "confidence_floor": 0.20,
+        "confidence_penalty": 0.30,
+        "display_strategy": "LAB_RANGE_PROXY",
+        "explainability_flags": ["NO_DIRECT_VITAMIN_D_MEASUREMENT"]
+      }
+    },
+    "b12_functional_adequacy_score": {
+      "metric_id": "b12_functional_adequacy_score",
+      "required_inputs": [],
+      "optional_inputs": [
+        {
+          "stream": "labs",
+          "benefit": "Direct B12, MMA, homocysteine",
+          "notes": "Functional B12 markers"
+        },
+        {
+          "stream": "pros",
+          "benefit": "Dietary patterns, supplements",
+          "notes": "SOAP profile"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "population_priors",
+          "source": "PartB_generator",
+          "notes": "Age, diet type priors"
+        }
+      ],
+      "dependency_type": "CONSTRAINED_INFERENCE",
+      "fallback_behavior": {
+        "when_required_missing": "render_wide_bounds_and_low_confidence",
+        "confidence_floor": 0.20,
+        "confidence_penalty": 0.30,
+        "display_strategy": "COMPOSITE_INDEX",
+        "explainability_flags": ["NO_DIRECT_B12_MEASUREMENT"]
+      }
+    },
+    "iron_utilization_status_class": {
+      "metric_id": "iron_utilization_status_class",
+      "required_inputs": [],
+      "optional_inputs": [
+        {
+          "stream": "labs",
+          "benefit": "Ferritin, TIBC, serum iron",
+          "notes": "Direct iron markers"
+        },
+        {
+          "stream": "pros",
+          "benefit": "Fatigue, dietary iron intake",
+          "notes": "SOAP profile"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "population_priors",
+          "source": "PartB_generator",
+          "notes": "Age, sex, menstrual status priors"
+        }
+      ],
+      "dependency_type": "CONSTRAINED_INFERENCE",
+      "fallback_behavior": {
+        "when_required_missing": "render_classification_only",
+        "confidence_floor": 0.20,
+        "confidence_penalty": 0.30,
+        "display_strategy": "PHYSIOLOGIC_PHENOTYPE",
+        "explainability_flags": ["NO_DIRECT_IRON_MARKERS"]
+      }
+    },
+    "magnesium_adequacy_proxy": {
+      "metric_id": "magnesium_adequacy_proxy",
+      "required_inputs": [],
+      "optional_inputs": [
+        {
+          "stream": "labs",
+          "benefit": "Serum or RBC magnesium",
+          "notes": "Direct measurement"
+        },
+        {
+          "stream": "pros",
+          "benefit": "Cramps, sleep quality, stress",
+          "notes": "Symptom proxies"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "population_priors",
+          "source": "PartB_generator",
+          "notes": "Diet, stress level priors"
+        }
+      ],
+      "dependency_type": "CONSTRAINED_INFERENCE",
+      "fallback_behavior": {
+        "when_required_missing": "render_wide_bounds_and_low_confidence",
+        "confidence_floor": 0.20,
+        "confidence_penalty": 0.30,
+        "display_strategy": "LAB_RANGE_PROXY",
+        "explainability_flags": ["NO_DIRECT_MAGNESIUM_MEASUREMENT"]
+      }
+    },
+    "micronutrient_risk_summary": {
+      "metric_id": "micronutrient_risk_summary",
+      "required_inputs": [],
+      "optional_inputs": [
+        {
+          "stream": "labs",
+          "benefit": "Any micronutrient panel",
+          "notes": "Vit D, B12, iron, magnesium"
+        },
+        {
+          "stream": "pros",
+          "benefit": "Dietary assessment, supplements",
+          "notes": "SOAP profile"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "composite_from_individual_metrics",
+          "source": "PartB_generator",
+          "notes": "Aggregates individual micronutrient signals"
+        }
+      ],
+      "dependency_type": "MODEL_ASSISTED_SYNTHESIS",
+      "fallback_behavior": {
+        "when_required_missing": "render_classification_only",
+        "confidence_floor": 0.20,
+        "confidence_penalty": 0.30,
+        "display_strategy": "COMPOSITE_INDEX",
+        "explainability_flags": ["LIMITED_MICRONUTRIENT_DATA"]
+      }
+    },
+    "chronic_inflammation_index": {
+      "metric_id": "chronic_inflammation_index",
+      "required_inputs": [],
+      "optional_inputs": [
+        {
+          "stream": "labs",
+          "benefit": "hs-CRP, ESR, cytokines",
+          "notes": "Direct inflammatory markers"
+        },
+        {
+          "stream": "pros",
+          "benefit": "Pain, stiffness, fatigue",
+          "notes": "Symptom-based proxies"
+        },
+        {
+          "stream": "vitals",
+          "benefit": "Resting HR, HRV",
+          "notes": "Autonomic inflammatory coupling"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "inflammatory_proxy_from_symptoms",
+          "source": "PartB_generator",
+          "notes": "SOAP symptom scoring"
+        }
+      ],
+      "dependency_type": "MODEL_ASSISTED_SYNTHESIS",
+      "fallback_behavior": {
+        "when_required_missing": "render_exploratory_only",
+        "confidence_floor": 0.20,
+        "confidence_penalty": 0.30,
+        "display_strategy": "COMPOSITE_INDEX",
+        "explainability_flags": ["NO_DIRECT_INFLAMMATORY_MARKERS"]
+      }
+    },
+    "acute_vs_chronic_pattern_classifier": {
+      "metric_id": "acute_vs_chronic_pattern_classifier",
+      "required_inputs": [],
+      "optional_inputs": [
+        {
+          "stream": "pros",
+          "benefit": "Symptom duration, onset pattern",
+          "notes": "SOAP temporal data"
+        },
+        {
+          "stream": "labs",
+          "benefit": "Serial hs-CRP or ESR",
+          "notes": "Longitudinal markers"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "temporal_symptom_pattern",
+          "source": "PartB_generator",
+          "notes": "Acute vs chronic classification"
+        }
+      ],
+      "dependency_type": "CONSTRAINED_INFERENCE",
+      "fallback_behavior": {
+        "when_required_missing": "render_classification_only",
+        "confidence_floor": 0.25,
+        "confidence_penalty": 0.25,
+        "display_strategy": "PHYSIOLOGIC_PHENOTYPE",
+        "explainability_flags": ["INSUFFICIENT_TEMPORAL_SYMPTOM_DATA"]
+      }
+    },
+    "inflammation_driven_ir_modifier": {
+      "metric_id": "inflammation_driven_ir_modifier",
+      "required_inputs": [
+        {
+          "stream": "glucose",
+          "min_days_covered": 5,
+          "max_missing_rate": 0.40,
+          "min_quality_score": 0.50,
+          "notes": "IR baseline from glucose"
+        }
+      ],
+      "optional_inputs": [
+        {
+          "stream": "labs",
+          "benefit": "hs-CRP + HOMA-IR co-measurement",
+          "notes": "Direct coupling"
+        },
+        {
+          "stream": "pros",
+          "benefit": "Inflammatory symptoms",
+          "notes": "Symptom proxy"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "ir_inflammation_coupling_score",
+          "source": "PartB_generator",
+          "notes": "Interaction term"
+        }
+      ],
+      "dependency_type": "MODEL_ASSISTED_SYNTHESIS",
+      "fallback_behavior": {
+        "when_required_missing": "render_exploratory_only",
+        "confidence_floor": 0.20,
+        "confidence_penalty": 0.30,
+        "display_strategy": "COMPOSITE_INDEX",
+        "explainability_flags": ["NO_DIRECT_INFLAMMATORY_IR_COUPLING"]
+      }
+    },
+    "cortisol_rhythm_integrity_score": {
+      "metric_id": "cortisol_rhythm_integrity_score",
+      "required_inputs": [],
+      "optional_inputs": [
+        {
+          "stream": "labs",
+          "benefit": "Salivary cortisol diurnal profile",
+          "notes": "Direct HPA axis measurement"
+        },
+        {
+          "stream": "sleep",
+          "benefit": "Sleep quality, timing",
+          "notes": "Circadian proxy"
+        },
+        {
+          "stream": "vitals",
+          "benefit": "Diurnal HR/HRV patterns",
+          "notes": "Autonomic circadian proxy"
+        },
+        {
+          "stream": "pros",
+          "benefit": "Stress, energy patterns",
+          "notes": "Subjective HPA proxy"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "circadian_proxy_from_vitals",
+          "source": "A2_feature_extractor",
+          "notes": "Diurnal HR variability"
+        }
+      ],
+      "dependency_type": "MODEL_ASSISTED_SYNTHESIS",
+      "fallback_behavior": {
+        "when_required_missing": "render_exploratory_only",
+        "confidence_floor": 0.20,
+        "confidence_penalty": 0.30,
+        "display_strategy": "COMPOSITE_INDEX",
+        "explainability_flags": ["NO_DIRECT_CORTISOL_MEASUREMENT"]
+      }
+    },
+    "thyroid_functional_pattern": {
+      "metric_id": "thyroid_functional_pattern",
+      "required_inputs": [],
+      "optional_inputs": [
+        {
+          "stream": "labs",
+          "benefit": "TSH, free T3/T4",
+          "notes": "Direct thyroid panel"
+        },
+        {
+          "stream": "vitals",
+          "benefit": "Resting HR, temp",
+          "notes": "Metabolic rate proxy"
+        },
+        {
+          "stream": "pros",
+          "benefit": "Energy, weight, temperature sensitivity",
+          "notes": "Symptom-based proxy"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "metabolic_rate_proxy",
+          "source": "A2_feature_extractor",
+          "notes": "From resting HR, temp"
+        }
+      ],
+      "dependency_type": "CONSTRAINED_INFERENCE",
+      "fallback_behavior": {
+        "when_required_missing": "render_classification_only",
+        "confidence_floor": 0.20,
+        "confidence_penalty": 0.30,
+        "display_strategy": "PHYSIOLOGIC_PHENOTYPE",
+        "explainability_flags": ["NO_DIRECT_THYROID_MEASUREMENT"]
+      }
+    },
+    "sympathetic_dominance_index": {
+      "metric_id": "sympathetic_dominance_index",
+      "required_inputs": [
+        {
+          "stream": "vitals",
+          "min_days_covered": 3,
+          "max_missing_rate": 0.40,
+          "min_quality_score": 0.50,
+          "notes": "HR, HRV for autonomic balance"
+        }
+      ],
+      "optional_inputs": [
+        {
+          "stream": "sleep",
+          "benefit": "Sleep quality, wake-ups",
+          "notes": "Nocturnal autonomic state"
+        },
+        {
+          "stream": "pros",
+          "benefit": "Stress, anxiety scores",
+          "notes": "Sympathetic activation proxies"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "hrv_sympathetic_indices",
+          "source": "A2_feature_extractor",
+          "notes": "LF/HF ratio, RMSSD"
+        }
+      ],
+      "dependency_type": "CONSTRAINED_INFERENCE",
+      "fallback_behavior": {
+        "when_required_missing": "render_wide_bounds_and_low_confidence",
+        "confidence_floor": 0.25,
+        "confidence_penalty": 0.25,
+        "display_strategy": "COMPOSITE_INDEX",
+        "explainability_flags": ["INSUFFICIENT_HRV_DATA"]
+      }
+    },
+    "autonomic_status": {
+      "metric_id": "autonomic_status",
+      "required_inputs": [
+        {
+          "stream": "vitals",
+          "min_days_covered": 3,
+          "max_missing_rate": 0.40,
+          "min_quality_score": 0.50,
+          "notes": "HR, HRV, BP"
+        }
+      ],
+      "optional_inputs": [
+        {
+          "stream": "sleep",
+          "benefit": "Sleep quality, nocturnal HR",
+          "notes": "Parasympathetic recovery"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "autonomic_balance_score",
+          "source": "A2_feature_extractor",
+          "notes": "Sympathetic-parasympathetic balance"
+        }
+      ],
+      "dependency_type": "CONSTRAINED_INFERENCE",
+      "fallback_behavior": {
+        "when_required_missing": "render_classification_only",
+        "confidence_floor": 0.25,
+        "confidence_penalty": 0.25,
+        "display_strategy": "PHYSIOLOGIC_PHENOTYPE",
+        "explainability_flags": ["INSUFFICIENT_AUTONOMIC_DATA"]
+      }
+    },
+    "egfr_trajectory_class": {
+      "metric_id": "egfr_trajectory_class",
+      "required_inputs": [],
+      "optional_inputs": [
+        {
+          "stream": "labs",
+          "benefit": "Creatinine, cystatin C",
+          "notes": "Direct eGFR calculation"
+        },
+        {
+          "stream": "vitals",
+          "benefit": "BP for renal risk context",
+          "notes": "Optional"
+        },
+        {
+          "stream": "pros",
+          "benefit": "Age, sex, race for eGFR equation",
+          "notes": "CKD-EPI inputs"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "egfr_calculated",
+          "source": "A2_deterministic_calculator",
+          "notes": "CKD-EPI formula"
+        }
+      ],
+      "dependency_type": "DERIVED_FORMULA",
+      "fallback_behavior": {
+        "when_required_missing": "render_classification_only",
+        "confidence_floor": 0.20,
+        "confidence_penalty": 0.30,
+        "display_strategy": "PHYSIOLOGIC_PHENOTYPE",
+        "explainability_flags": ["NO_CREATININE_FOR_EGFR"]
+      }
+    },
+    "renal_stress_index": {
+      "metric_id": "renal_stress_index",
+      "required_inputs": [],
+      "optional_inputs": [
+        {
+          "stream": "labs",
+          "benefit": "Creatinine, BUN, electrolytes",
+          "notes": "Direct renal markers"
+        },
+        {
+          "stream": "vitals",
+          "benefit": "BP, hydration status proxy",
+          "notes": "Hemodynamic context"
+        },
+        {
+          "stream": "glucose",
+          "benefit": "Glucose control for renal stress",
+          "notes": "Diabetic nephropathy risk"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "bun_creatinine_ratio",
+          "source": "A2_deterministic_calculator",
+          "notes": "If labs available"
+        }
+      ],
+      "dependency_type": "MODEL_ASSISTED_SYNTHESIS",
+      "fallback_behavior": {
+        "when_required_missing": "render_exploratory_only",
+        "confidence_floor": 0.20,
+        "confidence_penalty": 0.30,
+        "display_strategy": "COMPOSITE_INDEX",
+        "explainability_flags": ["NO_DIRECT_RENAL_MARKERS"]
+      }
+    },
+    "hydration_status": {
+      "metric_id": "hydration_status",
+      "required_inputs": [],
+      "optional_inputs": [
+        {
+          "stream": "vitals",
+          "benefit": "HR, BP orthostatic changes",
+          "notes": "Hydration proxy"
+        },
+        {
+          "stream": "labs",
+          "benefit": "BUN/Cr ratio, osmolality",
+          "notes": "Direct hydration markers"
+        },
+        {
+          "stream": "pros",
+          "benefit": "Thirst, urine color, intake",
+          "notes": "Subjective hydration"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "hydration_proxy_from_vitals",
+          "source": "A2_feature_extractor",
+          "notes": "Orthostatic HR change"
+        }
+      ],
+      "dependency_type": "CONSTRAINED_INFERENCE",
+      "fallback_behavior": {
+        "when_required_missing": "render_classification_only",
+        "confidence_floor": 0.25,
+        "confidence_penalty": 0.25,
+        "display_strategy": "PHYSIOLOGIC_PHENOTYPE",
+        "explainability_flags": ["INSUFFICIENT_HYDRATION_MARKERS"]
+      }
+    },
+    "dehydration_driven_creatinine_elevation_risk": {
+      "metric_id": "dehydration_driven_creatinine_elevation_risk",
+      "required_inputs": [],
+      "optional_inputs": [
+        {
+          "stream": "labs",
+          "benefit": "Creatinine, BUN/Cr ratio",
+          "notes": "Direct markers"
+        },
+        {
+          "stream": "vitals",
+          "benefit": "Orthostatic changes",
+          "notes": "Hydration status proxy"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "prerenal_vs_intrinsic_classifier",
+          "source": "PartB_generator",
+          "notes": "BUN/Cr ratio interpretation"
+        }
+      ],
+      "dependency_type": "CONSTRAINED_INFERENCE",
+      "fallback_behavior": {
+        "when_required_missing": "render_exploratory_only",
+        "confidence_floor": 0.20,
+        "confidence_penalty": 0.30,
+        "display_strategy": "PROBABILITY_ABNORMAL",
+        "explainability_flags": ["NO_CREATININE_OR_HYDRATION_MARKERS"]
+      }
+    },
+    "electrolyte_regulation_efficiency_score": {
+      "metric_id": "electrolyte_regulation_efficiency_score",
+      "required_inputs": [],
+      "optional_inputs": [
+        {
+          "stream": "labs",
+          "benefit": "Na, K, Cl, bicarb",
+          "notes": "Direct electrolyte panel"
+        },
+        {
+          "stream": "vitals",
+          "benefit": "BP for renin-angiotensin context",
+          "notes": "Optional"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "anion_gap",
+          "source": "A2_deterministic_calculator",
+          "notes": "Na - (Cl + HCO3)"
+        }
+      ],
+      "dependency_type": "CONSTRAINED_INFERENCE",
+      "fallback_behavior": {
+        "when_required_missing": "render_exploratory_only",
+        "confidence_floor": 0.20,
+        "confidence_penalty": 0.30,
+        "display_strategy": "COMPOSITE_INDEX",
+        "explainability_flags": ["NO_ELECTROLYTE_PANEL"]
+      }
+    },
+    "allostatic_load_proxy": {
+      "metric_id": "allostatic_load_proxy",
+      "required_inputs": [
+        {
+          "stream": "glucose",
+          "min_days_covered": 5,
+          "max_missing_rate": 0.40,
+          "min_quality_score": 0.50,
+          "notes": "Metabolic stress component"
+        },
+        {
+          "stream": "vitals",
+          "min_days_covered": 3,
+          "max_missing_rate": 0.40,
+          "min_quality_score": 0.50,
+          "notes": "CV stress component"
+        }
+      ],
+      "optional_inputs": [
+        {
+          "stream": "labs",
+          "benefit": "Cortisol, hs-CRP, lipids",
+          "notes": "Allostatic load biomarkers"
+        },
+        {
+          "stream": "sleep",
+          "benefit": "Sleep quality, duration",
+          "notes": "Recovery capacity"
+        },
+        {
+          "stream": "pros",
+          "benefit": "Chronic stress, symptoms",
+          "notes": "Subjective load"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "multi_system_stress_composite",
+          "source": "PartB_generator",
+          "notes": "Aggregates metabolic, CV, inflammatory, HPA"
+        }
+      ],
+      "dependency_type": "MODEL_ASSISTED_SYNTHESIS",
+      "fallback_behavior": {
+        "when_required_missing": "render_classification_only",
+        "confidence_floor": 0.25,
+        "confidence_penalty": 0.25,
+        "display_strategy": "COMPOSITE_INDEX",
+        "explainability_flags": ["PARTIAL_ALLOSTATIC_LOAD_INPUTS"]
+      }
+    },
+    "homeostatic_resilience_score": {
+      "metric_id": "homeostatic_resilience_score",
+      "required_inputs": [
+        {
+          "stream": "glucose",
+          "min_days_covered": 5,
+          "max_missing_rate": 0.40,
+          "min_quality_score": 0.50,
+          "notes": "Metabolic homeostasis"
+        },
+        {
+          "stream": "vitals",
+          "min_days_covered": 3,
+          "max_missing_rate": 0.40,
+          "min_quality_score": 0.50,
+          "notes": "CV homeostasis"
+        }
+      ],
+      "optional_inputs": [
+        {
+          "stream": "sleep",
+          "benefit": "Recovery capacity",
+          "notes": "Sleep quality"
+        },
+        {
+          "stream": "lactate",
+          "benefit": "Metabolic flexibility",
+          "notes": "Fuel-switching resilience"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "homeostatic_variability_index",
+          "source": "A2_feature_extractor",
+          "notes": "CV of multiple systems"
+        }
+      ],
+      "dependency_type": "MODEL_ASSISTED_SYNTHESIS",
+      "fallback_behavior": {
+        "when_required_missing": "render_classification_only",
+        "confidence_floor": 0.25,
+        "confidence_penalty": 0.25,
+        "display_strategy": "COMPOSITE_INDEX",
+        "explainability_flags": ["INSUFFICIENT_MULTI_SYSTEM_DATA"]
+      }
+    },
+    "recovery_capacity_score": {
+      "metric_id": "recovery_capacity_score",
+      "required_inputs": [],
+      "optional_inputs": [
+        {
+          "stream": "sleep",
+          "benefit": "Sleep quality, REM, deep sleep",
+          "notes": "Primary recovery signal"
+        },
+        {
+          "stream": "vitals",
+          "benefit": "Nocturnal HR, HRV recovery",
+          "notes": "Autonomic recovery"
+        },
+        {
+          "stream": "pros",
+          "benefit": "Perceived recovery, energy",
+          "notes": "Subjective recovery"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "nocturnal_hrv_recovery_rate",
+          "source": "A2_feature_extractor",
+          "notes": "Sleep-related HRV changes"
+        }
+      ],
+      "dependency_type": "MODEL_ASSISTED_SYNTHESIS",
+      "fallback_behavior": {
+        "when_required_missing": "render_exploratory_only",
+        "confidence_floor": 0.20,
+        "confidence_penalty": 0.30,
+        "display_strategy": "COMPOSITE_INDEX",
+        "explainability_flags": ["NO_SLEEP_DATA_FOR_RECOVERY"]
+      }
+    },
+    "stress_adaptation_vs_maladaptation_classifier": {
+      "metric_id": "stress_adaptation_vs_maladaptation_classifier",
+      "required_inputs": [],
+      "optional_inputs": [
+        {
+          "stream": "vitals",
+          "benefit": "HRV, resting HR trends",
+          "notes": "Adaptation vs dysregulation"
+        },
+        {
+          "stream": "sleep",
+          "benefit": "Sleep quality trends",
+          "notes": "Recovery trends"
+        },
+        {
+          "stream": "pros",
+          "benefit": "Stress, mood, energy trends",
+          "notes": "Subjective adaptation"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "stress_resilience_trajectory",
+          "source": "PartB_generator",
+          "notes": "Adaptive vs maladaptive classification"
+        }
+      ],
+      "dependency_type": "MODEL_ASSISTED_SYNTHESIS",
+      "fallback_behavior": {
+        "when_required_missing": "render_classification_only",
+        "confidence_floor": 0.20,
+        "confidence_penalty": 0.30,
+        "display_strategy": "PHYSIOLOGIC_PHENOTYPE",
+        "explainability_flags": ["INSUFFICIENT_LONGITUDINAL_STRESS_DATA"]
+      }
+    },
+    "burnout_risk_trajectory": {
+      "metric_id": "burnout_risk_trajectory",
+      "required_inputs": [],
+      "optional_inputs": [
+        {
+          "stream": "pros",
+          "benefit": "Chronic stress, exhaustion, cynicism",
+          "notes": "Burnout symptom clusters"
+        },
+        {
+          "stream": "sleep",
+          "benefit": "Sleep quality degradation",
+          "notes": "Burnout sleep phenotype"
+        },
+        {
+          "stream": "vitals",
+          "benefit": "HRV degradation trends",
+          "notes": "Autonomic burnout marker"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "burnout_symptom_score",
+          "source": "PartB_generator",
+          "notes": "From SOAP burnout questions"
+        }
+      ],
+      "dependency_type": "MODEL_ASSISTED_SYNTHESIS",
+      "fallback_behavior": {
+        "when_required_missing": "render_exploratory_only",
+        "confidence_floor": 0.20,
+        "confidence_penalty": 0.30,
+        "display_strategy": "PHYSIOLOGIC_PHENOTYPE",
+        "explainability_flags": ["INSUFFICIENT_BURNOUT_SYMPTOM_DATA"]
+      }
+    },
+    "physiological_age_proxy": {
+      "metric_id": "physiological_age_proxy",
+      "required_inputs": [
+        {
+          "stream": "glucose",
+          "min_days_covered": 5,
+          "max_missing_rate": 0.40,
+          "min_quality_score": 0.50,
+          "notes": "Metabolic aging component"
+        },
+        {
+          "stream": "vitals",
+          "min_days_covered": 3,
+          "max_missing_rate": 0.40,
+          "min_quality_score": 0.50,
+          "notes": "CV aging component"
+        }
+      ],
+      "optional_inputs": [
+        {
+          "stream": "labs",
+          "benefit": "Lipids, hs-CRP, glucose",
+          "notes": "Biomarker aging clocks"
+        },
+        {
+          "stream": "pros",
+          "benefit": "Chronological age, lifestyle",
+          "notes": "Baseline for delta"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "biological_age_composite",
+          "source": "PartB_generator",
+          "notes": "Multi-system aging score"
+        }
+      ],
+      "dependency_type": "MODEL_ASSISTED_SYNTHESIS",
+      "fallback_behavior": {
+        "when_required_missing": "render_classification_only",
+        "confidence_floor": 0.25,
+        "confidence_penalty": 0.25,
+        "display_strategy": "COMPOSITE_INDEX",
+        "explainability_flags": ["PARTIAL_AGING_BIOMARKERS"]
+      }
+    },
+    "cardio_inflammatory_coupling_index": {
+      "metric_id": "cardio_inflammatory_coupling_index",
+      "required_inputs": [
+        {
+          "stream": "vitals",
+          "min_days_covered": 3,
+          "max_missing_rate": 0.40,
+          "min_quality_score": 0.50,
+          "notes": "CV component"
+        }
+      ],
+      "optional_inputs": [
+        {
+          "stream": "labs",
+          "benefit": "hs-CRP + lipids or BP",
+          "notes": "Direct coupling markers"
+        },
+        {
+          "stream": "pros",
+          "benefit": "Inflammatory symptoms",
+          "notes": "Symptom proxies"
+        }
+      ],
+      "derived_inputs": [
+        {
+          "name": "cv_inflammatory_interaction",
+          "source": "PartB_generator",
+          "notes": "BP-HRV-inflammation coupling"
+        }
+      ],
+      "dependency_type": "MODEL_ASSISTED_SYNTHESIS",
+      "fallback_behavior": {
+        "when_required_missing": "render_exploratory_only",
+        "confidence_floor": 0.20,
+        "confidence_penalty": 0.30,
+        "display_strategy": "COMPOSITE_INDEX",
+        "explainability_flags": ["NO_DIRECT_CV_INFLAMMATORY_MARKERS"]
+      }
+    }
+  }
+}

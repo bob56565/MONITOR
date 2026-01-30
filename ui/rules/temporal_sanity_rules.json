@@ -1,0 +1,526 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Temporal Sanity Rules - Physiologically Impossible Swing Detection",
+  "description": "Enforce temporal coherence by capping/dampening/flagging day-to-day physiologically impossible swings. Rules derived from reference intervals and clinical plausibility constraints.",
+  "version": "1.0.0",
+  "default_rules": {
+    "LAB_RANGE_PROXY_default": {
+      "description": "For lab-analog metrics, max_daily_delta = 20% of reference range width",
+      "formula": "max_daily_delta = 0.20 * (ref_high - ref_low)"
+    },
+    "COMPOSITE_INDEX_default": {
+      "description": "For 0-100 composite scores",
+      "max_daily_delta": 15,
+      "max_weekly_delta": 25,
+      "units": "index_points"
+    },
+    "PROBABILITY_ABNORMAL_default": {
+      "description": "For probability percentages",
+      "max_daily_delta": 20,
+      "max_weekly_delta": 30,
+      "units": "percentage_points"
+    },
+    "PHYSIOLOGIC_PHENOTYPE_default": {
+      "description": "For classifications, limit flip-rate",
+      "max_flips_per_window": 1,
+      "window_hours": 48,
+      "units": "class_changes"
+    }
+  },
+  "metrics": {
+    "estimated_hba1c_range": {
+      "metric_id": "estimated_hba1c_range",
+      "max_daily_delta": 0.3,
+      "max_weekly_delta": 0.5,
+      "delta_units": "percent",
+      "rationale": "HbA1c changes slowly (reflects 90-day glucose average)",
+      "violation_behavior": {
+        "cap_strategy": "dampen_by_factor",
+        "dampen_factor": 0.5,
+        "confidence_penalty": 0.15,
+        "range_widen_multiplier": 1.3,
+        "flag_code": "TEMPORAL_VIOLATION_HBA1C_IMPOSSIBLE_DELTA"
+      }
+    },
+    "insulin_resistance_probability": {
+      "metric_id": "insulin_resistance_probability",
+      "max_daily_delta": 20,
+      "max_weekly_delta": 30,
+      "delta_units": "percentage_points",
+      "rationale": "IR changes slowly over weeks to months",
+      "violation_behavior": {
+        "cap_strategy": "cap_to_max_delta",
+        "dampen_factor": null,
+        "confidence_penalty": 0.10,
+        "range_widen_multiplier": 1.2,
+        "flag_code": "TEMPORAL_VIOLATION_IR_PROB_SWING"
+      }
+    },
+    "metabolic_flexibility_score": {
+      "metric_id": "metabolic_flexibility_score",
+      "max_daily_delta": 15,
+      "max_weekly_delta": 25,
+      "delta_units": "index_points_out_of_100",
+      "rationale": "Metabolic flexibility changes slowly",
+      "violation_behavior": {
+        "cap_strategy": "dampen_by_factor",
+        "dampen_factor": 0.6,
+        "confidence_penalty": 0.12,
+        "range_widen_multiplier": 1.25,
+        "flag_code": "TEMPORAL_VIOLATION_FLEXIBILITY_SWING"
+      }
+    },
+    "postprandial_dysregulation_phenotype": {
+      "metric_id": "postprandial_dysregulation_phenotype",
+      "max_flips_per_window": 1,
+      "window_hours": 48,
+      "delta_units": "class_changes",
+      "rationale": "Phenotype classification should be stable",
+      "violation_behavior": {
+        "cap_strategy": "prevent_flip",
+        "dampen_factor": null,
+        "confidence_penalty": 0.15,
+        "range_widen_multiplier": null,
+        "flag_code": "TEMPORAL_VIOLATION_PHENOTYPE_FLIP_TOO_FAST"
+      }
+    },
+    "prediabetes_trajectory_class": {
+      "metric_id": "prediabetes_trajectory_class",
+      "max_flips_per_window": 1,
+      "window_hours": 168,
+      "delta_units": "class_changes",
+      "rationale": "Trajectory class requires longitudinal stability",
+      "violation_behavior": {
+        "cap_strategy": "prevent_flip",
+        "dampen_factor": null,
+        "confidence_penalty": 0.20,
+        "range_widen_multiplier": null,
+        "flag_code": "TEMPORAL_VIOLATION_TRAJECTORY_FLIP_TOO_FAST"
+      }
+    },
+    "ldl_pattern_risk_proxy": {
+      "metric_id": "ldl_pattern_risk_proxy",
+      "max_daily_delta": 20,
+      "max_weekly_delta": 30,
+      "delta_units": "mg_per_dL",
+      "rationale": "LDL-C changes slowly (optimal: <100, borderline: 100-159, high: ≥160)",
+      "violation_behavior": {
+        "cap_strategy": "cap_to_max_delta",
+        "dampen_factor": null,
+        "confidence_penalty": 0.10,
+        "range_widen_multiplier": 1.2,
+        "flag_code": "TEMPORAL_VIOLATION_LDL_IMPOSSIBLE_SWING"
+      }
+    },
+    "hdl_functional_likelihood": {
+      "metric_id": "hdl_functional_likelihood",
+      "max_daily_delta": 5,
+      "max_weekly_delta": 10,
+      "delta_units": "mg_per_dL",
+      "rationale": "HDL-C very stable (typical: 40-60 mg/dL)",
+      "violation_behavior": {
+        "cap_strategy": "cap_to_max_delta",
+        "dampen_factor": null,
+        "confidence_penalty": 0.10,
+        "range_widen_multiplier": 1.2,
+        "flag_code": "TEMPORAL_VIOLATION_HDL_IMPOSSIBLE_SWING"
+      }
+    },
+    "triglyceride_elevation_probability": {
+      "metric_id": "triglyceride_elevation_probability",
+      "max_daily_delta": 20,
+      "max_weekly_delta": 30,
+      "delta_units": "percentage_points",
+      "rationale": "TG elevation probability changes moderately",
+      "violation_behavior": {
+        "cap_strategy": "cap_to_max_delta",
+        "dampen_factor": null,
+        "confidence_penalty": 0.10,
+        "range_widen_multiplier": 1.2,
+        "flag_code": "TEMPORAL_VIOLATION_TG_PROB_SWING"
+      }
+    },
+    "atherogenic_risk_phenotype": {
+      "metric_id": "atherogenic_risk_phenotype",
+      "max_flips_per_window": 1,
+      "window_hours": 168,
+      "delta_units": "class_changes",
+      "rationale": "Atherogenic phenotype stable over weeks",
+      "violation_behavior": {
+        "cap_strategy": "prevent_flip",
+        "dampen_factor": null,
+        "confidence_penalty": 0.15,
+        "range_widen_multiplier": null,
+        "flag_code": "TEMPORAL_VIOLATION_ATHEROGENIC_PHENOTYPE_FLIP"
+      }
+    },
+    "cardiometabolic_risk_score": {
+      "metric_id": "cardiometabolic_risk_score",
+      "max_daily_delta": 15,
+      "max_weekly_delta": 25,
+      "delta_units": "index_points_out_of_100",
+      "rationale": "Composite risk score changes slowly",
+      "violation_behavior": {
+        "cap_strategy": "dampen_by_factor",
+        "dampen_factor": 0.6,
+        "confidence_penalty": 0.12,
+        "range_widen_multiplier": 1.25,
+        "flag_code": "TEMPORAL_VIOLATION_CM_RISK_SWING"
+      }
+    },
+    "metabolic_inflammatory_coupling_index": {
+      "metric_id": "metabolic_inflammatory_coupling_index",
+      "max_daily_delta": 15,
+      "max_weekly_delta": 25,
+      "delta_units": "index_points_out_of_100",
+      "rationale": "Coupling index changes moderately",
+      "violation_behavior": {
+        "cap_strategy": "dampen_by_factor",
+        "dampen_factor": 0.6,
+        "confidence_penalty": 0.12,
+        "range_widen_multiplier": 1.25,
+        "flag_code": "TEMPORAL_VIOLATION_METAB_INFLAM_SWING"
+      }
+    },
+    "vitamin_d_sufficiency_likelihood": {
+      "metric_id": "vitamin_d_sufficiency_likelihood",
+      "max_daily_delta": 5,
+      "max_weekly_delta": 10,
+      "delta_units": "ng_per_mL",
+      "rationale": "Vitamin D changes very slowly (weeks to months)",
+      "violation_behavior": {
+        "cap_strategy": "cap_to_max_delta",
+        "dampen_factor": null,
+        "confidence_penalty": 0.15,
+        "range_widen_multiplier": 1.3,
+        "flag_code": "TEMPORAL_VIOLATION_VIT_D_IMPOSSIBLE_DELTA"
+      }
+    },
+    "b12_functional_adequacy_score": {
+      "metric_id": "b12_functional_adequacy_score",
+      "max_daily_delta": 15,
+      "max_weekly_delta": 25,
+      "delta_units": "index_points_out_of_100",
+      "rationale": "B12 status changes slowly",
+      "violation_behavior": {
+        "cap_strategy": "dampen_by_factor",
+        "dampen_factor": 0.6,
+        "confidence_penalty": 0.12,
+        "range_widen_multiplier": 1.25,
+        "flag_code": "TEMPORAL_VIOLATION_B12_SWING"
+      }
+    },
+    "iron_utilization_status_class": {
+      "metric_id": "iron_utilization_status_class",
+      "max_flips_per_window": 1,
+      "window_hours": 168,
+      "delta_units": "class_changes",
+      "rationale": "Iron status stable over weeks",
+      "violation_behavior": {
+        "cap_strategy": "prevent_flip",
+        "dampen_factor": null,
+        "confidence_penalty": 0.15,
+        "range_widen_multiplier": null,
+        "flag_code": "TEMPORAL_VIOLATION_IRON_CLASS_FLIP"
+      }
+    },
+    "magnesium_adequacy_proxy": {
+      "metric_id": "magnesium_adequacy_proxy",
+      "max_daily_delta": 0.3,
+      "max_weekly_delta": 0.5,
+      "delta_units": "mg_per_dL",
+      "rationale": "Magnesium changes moderately (typical: 1.7-2.2 mg/dL)",
+      "violation_behavior": {
+        "cap_strategy": "cap_to_max_delta",
+        "dampen_factor": null,
+        "confidence_penalty": 0.10,
+        "range_widen_multiplier": 1.2,
+        "flag_code": "TEMPORAL_VIOLATION_MG_SWING"
+      }
+    },
+    "micronutrient_risk_summary": {
+      "metric_id": "micronutrient_risk_summary",
+      "max_daily_delta": 15,
+      "max_weekly_delta": 25,
+      "delta_units": "index_points_out_of_100",
+      "rationale": "Composite micronutrient score changes slowly",
+      "violation_behavior": {
+        "cap_strategy": "dampen_by_factor",
+        "dampen_factor": 0.6,
+        "confidence_penalty": 0.12,
+        "range_widen_multiplier": 1.25,
+        "flag_code": "TEMPORAL_VIOLATION_MICRONUTRIENT_SWING"
+      }
+    },
+    "chronic_inflammation_index": {
+      "metric_id": "chronic_inflammation_index",
+      "max_daily_delta": 15,
+      "max_weekly_delta": 25,
+      "delta_units": "index_points_out_of_100",
+      "rationale": "Chronic inflammation changes slowly",
+      "violation_behavior": {
+        "cap_strategy": "dampen_by_factor",
+        "dampen_factor": 0.6,
+        "confidence_penalty": 0.12,
+        "range_widen_multiplier": 1.25,
+        "flag_code": "TEMPORAL_VIOLATION_CHRONIC_INFLAM_SWING"
+      }
+    },
+    "acute_vs_chronic_pattern_classifier": {
+      "metric_id": "acute_vs_chronic_pattern_classifier",
+      "max_flips_per_window": 1,
+      "window_hours": 48,
+      "delta_units": "class_changes",
+      "rationale": "Acute vs chronic classification should be stable",
+      "violation_behavior": {
+        "cap_strategy": "prevent_flip",
+        "dampen_factor": null,
+        "confidence_penalty": 0.15,
+        "range_widen_multiplier": null,
+        "flag_code": "TEMPORAL_VIOLATION_INFLAM_PATTERN_FLIP"
+      }
+    },
+    "inflammation_driven_ir_modifier": {
+      "metric_id": "inflammation_driven_ir_modifier",
+      "max_daily_delta": 15,
+      "max_weekly_delta": 25,
+      "delta_units": "index_points_out_of_100",
+      "rationale": "Coupling modifier changes moderately",
+      "violation_behavior": {
+        "cap_strategy": "dampen_by_factor",
+        "dampen_factor": 0.6,
+        "confidence_penalty": 0.12,
+        "range_widen_multiplier": 1.25,
+        "flag_code": "TEMPORAL_VIOLATION_INFLAM_IR_SWING"
+      }
+    },
+    "cortisol_rhythm_integrity_score": {
+      "metric_id": "cortisol_rhythm_integrity_score",
+      "max_daily_delta": 15,
+      "max_weekly_delta": 25,
+      "delta_units": "index_points_out_of_100",
+      "rationale": "Circadian rhythm integrity changes moderately",
+      "violation_behavior": {
+        "cap_strategy": "dampen_by_factor",
+        "dampen_factor": 0.6,
+        "confidence_penalty": 0.12,
+        "range_widen_multiplier": 1.25,
+        "flag_code": "TEMPORAL_VIOLATION_CORTISOL_RHYTHM_SWING"
+      }
+    },
+    "thyroid_functional_pattern": {
+      "metric_id": "thyroid_functional_pattern",
+      "max_flips_per_window": 1,
+      "window_hours": 168,
+      "delta_units": "class_changes",
+      "rationale": "Thyroid pattern stable over weeks",
+      "violation_behavior": {
+        "cap_strategy": "prevent_flip",
+        "dampen_factor": null,
+        "confidence_penalty": 0.15,
+        "range_widen_multiplier": null,
+        "flag_code": "TEMPORAL_VIOLATION_THYROID_PATTERN_FLIP"
+      }
+    },
+    "sympathetic_dominance_index": {
+      "metric_id": "sympathetic_dominance_index",
+      "max_daily_delta": 15,
+      "max_weekly_delta": 25,
+      "delta_units": "index_points_out_of_100",
+      "rationale": "Autonomic dominance changes moderately",
+      "violation_behavior": {
+        "cap_strategy": "dampen_by_factor",
+        "dampen_factor": 0.6,
+        "confidence_penalty": 0.12,
+        "range_widen_multiplier": 1.25,
+        "flag_code": "TEMPORAL_VIOLATION_SYMPATHETIC_DOM_SWING"
+      }
+    },
+    "autonomic_status": {
+      "metric_id": "autonomic_status",
+      "max_flips_per_window": 1,
+      "window_hours": 48,
+      "delta_units": "class_changes",
+      "rationale": "Autonomic status classification should be stable",
+      "violation_behavior": {
+        "cap_strategy": "prevent_flip",
+        "dampen_factor": null,
+        "confidence_penalty": 0.15,
+        "range_widen_multiplier": null,
+        "flag_code": "TEMPORAL_VIOLATION_AUTONOMIC_STATUS_FLIP"
+      }
+    },
+    "egfr_trajectory_class": {
+      "metric_id": "egfr_trajectory_class",
+      "max_flips_per_window": 1,
+      "window_hours": 168,
+      "delta_units": "class_changes",
+      "rationale": "eGFR trajectory stable over weeks (CKD stage progression is slow)",
+      "violation_behavior": {
+        "cap_strategy": "prevent_flip",
+        "dampen_factor": null,
+        "confidence_penalty": 0.20,
+        "range_widen_multiplier": null,
+        "flag_code": "TEMPORAL_VIOLATION_EGFR_TRAJECTORY_FLIP"
+      }
+    },
+    "renal_stress_index": {
+      "metric_id": "renal_stress_index",
+      "max_daily_delta": 15,
+      "max_weekly_delta": 25,
+      "delta_units": "index_points_out_of_100",
+      "rationale": "Renal stress changes moderately",
+      "violation_behavior": {
+        "cap_strategy": "dampen_by_factor",
+        "dampen_factor": 0.6,
+        "confidence_penalty": 0.12,
+        "range_widen_multiplier": 1.25,
+        "flag_code": "TEMPORAL_VIOLATION_RENAL_STRESS_SWING"
+      }
+    },
+    "hydration_status": {
+      "metric_id": "hydration_status",
+      "max_flips_per_window": 2,
+      "window_hours": 24,
+      "delta_units": "class_changes",
+      "rationale": "Hydration can change daily but not excessively",
+      "violation_behavior": {
+        "cap_strategy": "prevent_flip",
+        "dampen_factor": null,
+        "confidence_penalty": 0.10,
+        "range_widen_multiplier": null,
+        "flag_code": "TEMPORAL_VIOLATION_HYDRATION_FLIP_TOO_FAST"
+      }
+    },
+    "dehydration_driven_creatinine_elevation_risk": {
+      "metric_id": "dehydration_driven_creatinine_elevation_risk",
+      "max_daily_delta": 20,
+      "max_weekly_delta": 30,
+      "delta_units": "percentage_points",
+      "rationale": "Dehydration risk probability changes moderately",
+      "violation_behavior": {
+        "cap_strategy": "cap_to_max_delta",
+        "dampen_factor": null,
+        "confidence_penalty": 0.10,
+        "range_widen_multiplier": 1.2,
+        "flag_code": "TEMPORAL_VIOLATION_DEHYDR_CR_PROB_SWING"
+      }
+    },
+    "electrolyte_regulation_efficiency_score": {
+      "metric_id": "electrolyte_regulation_efficiency_score",
+      "max_daily_delta": 15,
+      "max_weekly_delta": 25,
+      "delta_units": "index_points_out_of_100",
+      "rationale": "Electrolyte regulation efficiency changes moderately",
+      "violation_behavior": {
+        "cap_strategy": "dampen_by_factor",
+        "dampen_factor": 0.6,
+        "confidence_penalty": 0.12,
+        "range_widen_multiplier": 1.25,
+        "flag_code": "TEMPORAL_VIOLATION_ELECTROLYTE_EFF_SWING"
+      }
+    },
+    "allostatic_load_proxy": {
+      "metric_id": "allostatic_load_proxy",
+      "max_daily_delta": 15,
+      "max_weekly_delta": 25,
+      "delta_units": "index_points_out_of_100",
+      "rationale": "Allostatic load changes slowly (chronic stress accumulation)",
+      "violation_behavior": {
+        "cap_strategy": "dampen_by_factor",
+        "dampen_factor": 0.6,
+        "confidence_penalty": 0.12,
+        "range_widen_multiplier": 1.25,
+        "flag_code": "TEMPORAL_VIOLATION_ALLOSTATIC_LOAD_SWING"
+      }
+    },
+    "homeostatic_resilience_score": {
+      "metric_id": "homeostatic_resilience_score",
+      "max_daily_delta": 15,
+      "max_weekly_delta": 25,
+      "delta_units": "index_points_out_of_100",
+      "rationale": "Resilience changes slowly",
+      "violation_behavior": {
+        "cap_strategy": "dampen_by_factor",
+        "dampen_factor": 0.6,
+        "confidence_penalty": 0.12,
+        "range_widen_multiplier": 1.25,
+        "flag_code": "TEMPORAL_VIOLATION_RESILIENCE_SWING"
+      }
+    },
+    "recovery_capacity_score": {
+      "metric_id": "recovery_capacity_score",
+      "max_daily_delta": 15,
+      "max_weekly_delta": 25,
+      "delta_units": "index_points_out_of_100",
+      "rationale": "Recovery capacity changes moderately",
+      "violation_behavior": {
+        "cap_strategy": "dampen_by_factor",
+        "dampen_factor": 0.6,
+        "confidence_penalty": 0.12,
+        "range_widen_multiplier": 1.25,
+        "flag_code": "TEMPORAL_VIOLATION_RECOVERY_CAP_SWING"
+      }
+    },
+    "stress_adaptation_vs_maladaptation_classifier": {
+      "metric_id": "stress_adaptation_vs_maladaptation_classifier",
+      "max_flips_per_window": 1,
+      "window_hours": 168,
+      "delta_units": "class_changes",
+      "rationale": "Adaptation vs maladaptation classification requires stability",
+      "violation_behavior": {
+        "cap_strategy": "prevent_flip",
+        "dampen_factor": null,
+        "confidence_penalty": 0.15,
+        "range_widen_multiplier": null,
+        "flag_code": "TEMPORAL_VIOLATION_STRESS_ADAPT_FLIP"
+      }
+    },
+    "burnout_risk_trajectory": {
+      "metric_id": "burnout_risk_trajectory",
+      "max_flips_per_window": 1,
+      "window_hours": 168,
+      "delta_units": "class_changes",
+      "rationale": "Burnout trajectory requires longitudinal stability",
+      "violation_behavior": {
+        "cap_strategy": "prevent_flip",
+        "dampen_factor": null,
+        "confidence_penalty": 0.20,
+        "range_widen_multiplier": null,
+        "flag_code": "TEMPORAL_VIOLATION_BURNOUT_TRAJECTORY_FLIP"
+      }
+    },
+    "physiological_age_proxy": {
+      "metric_id": "physiological_age_proxy",
+      "max_daily_delta": 1,
+      "max_weekly_delta": 2,
+      "delta_units": "years",
+      "rationale": "Biological age changes very slowly (should trend with chronological age)",
+      "violation_behavior": {
+        "cap_strategy": "cap_to_max_delta",
+        "dampen_factor": null,
+        "confidence_penalty": 0.20,
+        "range_widen_multiplier": 1.5,
+        "flag_code": "TEMPORAL_VIOLATION_PHYS_AGE_IMPOSSIBLE_DELTA"
+      }
+    },
+    "cardio_inflammatory_coupling_index": {
+      "metric_id": "cardio_inflammatory_coupling_index",
+      "max_daily_delta": 15,
+      "max_weekly_delta": 25,
+      "delta_units": "index_points_out_of_100",
+      "rationale": "Coupling index changes moderately",
+      "violation_behavior": {
+        "cap_strategy": "dampen_by_factor",
+        "dampen_factor": 0.6,
+        "confidence_penalty": 0.12,
+        "range_widen_multiplier": 1.25,
+        "flag_code": "TEMPORAL_VIOLATION_CARDIO_INFLAM_SWING"
+      }
+    }
+  },
+  "validation": {
+    "must_have_exactly_35_entries": true,
+    "all_metrics_must_have_temporal_rules": true
+  }
+}

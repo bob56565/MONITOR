@@ -1,0 +1,173 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Metric Provenance Map - Deterministic vs Inferred Labeling",
+  "description": "Explicit separation of deterministic vs inferred outputs on every Part B card. Provenance is derived from actual repo implementation (deterministic calculators vs model outputs vs composite synthesis).",
+  "version": "1.0.0",
+  "provenance_badge_values": {
+    "DERIVED_FORMULA": {
+      "measured_vs_inferred": "DERIVED",
+      "badge_color": "green",
+      "description": "Calculated using deterministic formula from measured inputs",
+      "examples": "eGFR (CKD-EPI), anion gap, BMI, non-HDL cholesterol"
+    },
+    "CONSTRAINED_INFERENCE": {
+      "measured_vs_inferred": "INFERRED",
+      "badge_color": "blue",
+      "description": "Inferred using Bayesian constraint satisfaction with physiological bounds",
+      "examples": "Estimated HbA1c, insulin resistance probability, LDL pattern proxy"
+    },
+    "MODEL_ASSISTED_SYNTHESIS": {
+      "measured_vs_inferred": "INFERRED",
+      "badge_color": "purple",
+      "description": "Synthesized using ML-assisted integration of multiple physiological signals",
+      "examples": "Allostatic load, metabolic flexibility, chronic inflammation index"
+    }
+  },
+  "metrics": {
+    "estimated_hba1c_range": {
+      "provenance_label": "CONSTRAINED_INFERENCE",
+      "rationale": "Estimated from continuous glucose patterns using population-validated mapping"
+    },
+    "insulin_resistance_probability": {
+      "provenance_label": "CONSTRAINED_INFERENCE",
+      "rationale": "Inferred from glucose patterns, anthropometrics, and physiological constraints"
+    },
+    "metabolic_flexibility_score": {
+      "provenance_label": "MODEL_ASSISTED_SYNTHESIS",
+      "rationale": "Composite score integrating glucose-lactate coupling and fuel-switching patterns"
+    },
+    "postprandial_dysregulation_phenotype": {
+      "provenance_label": "CONSTRAINED_INFERENCE",
+      "rationale": "Classified from postprandial glucose excursion patterns"
+    },
+    "prediabetes_trajectory_class": {
+      "provenance_label": "CONSTRAINED_INFERENCE",
+      "rationale": "Trajectory classification from longitudinal glucose trends"
+    },
+    "ldl_pattern_risk_proxy": {
+      "provenance_label": "CONSTRAINED_INFERENCE",
+      "rationale": "Estimated using glucose-lipid metabolism coupling with population priors"
+    },
+    "hdl_functional_likelihood": {
+      "provenance_label": "CONSTRAINED_INFERENCE",
+      "rationale": "Estimated from activity/vitals patterns as HDL functional proxy"
+    },
+    "triglyceride_elevation_probability": {
+      "provenance_label": "CONSTRAINED_INFERENCE",
+      "rationale": "Probability model using glucose-TG coupling and metabolic patterns"
+    },
+    "atherogenic_risk_phenotype": {
+      "provenance_label": "MODEL_ASSISTED_SYNTHESIS",
+      "rationale": "Multi-system phenotype classification integrating metabolic and CV signals"
+    },
+    "cardiometabolic_risk_score": {
+      "provenance_label": "MODEL_ASSISTED_SYNTHESIS",
+      "rationale": "Framingham-style composite risk score from multiple CV and metabolic inputs"
+    },
+    "metabolic_inflammatory_coupling_index": {
+      "provenance_label": "MODEL_ASSISTED_SYNTHESIS",
+      "rationale": "Interaction model capturing metabolic-inflammatory cross-talk"
+    },
+    "vitamin_d_sufficiency_likelihood": {
+      "provenance_label": "CONSTRAINED_INFERENCE",
+      "rationale": "Estimated using population priors conditioned on demographics and season"
+    },
+    "b12_functional_adequacy_score": {
+      "provenance_label": "CONSTRAINED_INFERENCE",
+      "rationale": "Estimated from dietary patterns and population priors"
+    },
+    "iron_utilization_status_class": {
+      "provenance_label": "CONSTRAINED_INFERENCE",
+      "rationale": "Classified using symptom proxies and demographic priors"
+    },
+    "magnesium_adequacy_proxy": {
+      "provenance_label": "CONSTRAINED_INFERENCE",
+      "rationale": "Estimated from symptom proxies and dietary assessment"
+    },
+    "micronutrient_risk_summary": {
+      "provenance_label": "MODEL_ASSISTED_SYNTHESIS",
+      "rationale": "Composite summary aggregating individual micronutrient signals"
+    },
+    "chronic_inflammation_index": {
+      "provenance_label": "MODEL_ASSISTED_SYNTHESIS",
+      "rationale": "Composite index integrating symptom proxies and autonomic markers"
+    },
+    "acute_vs_chronic_pattern_classifier": {
+      "provenance_label": "CONSTRAINED_INFERENCE",
+      "rationale": "Temporal pattern classification from symptom duration and onset"
+    },
+    "inflammation_driven_ir_modifier": {
+      "provenance_label": "MODEL_ASSISTED_SYNTHESIS",
+      "rationale": "Interaction model capturing inflammation-IR coupling"
+    },
+    "cortisol_rhythm_integrity_score": {
+      "provenance_label": "MODEL_ASSISTED_SYNTHESIS",
+      "rationale": "Circadian proxy from diurnal vitals patterns and sleep quality"
+    },
+    "thyroid_functional_pattern": {
+      "provenance_label": "CONSTRAINED_INFERENCE",
+      "rationale": "Pattern classification from metabolic rate proxies and symptoms"
+    },
+    "sympathetic_dominance_index": {
+      "provenance_label": "MODEL_ASSISTED_SYNTHESIS",
+      "rationale": "Autonomic balance index from HRV analysis and vitals patterns"
+    },
+    "autonomic_status": {
+      "provenance_label": "CONSTRAINED_INFERENCE",
+      "rationale": "Autonomic state classification from HR, HRV, and BP patterns"
+    },
+    "egfr_trajectory_class": {
+      "provenance_label": "DERIVED_FORMULA",
+      "rationale": "Calculated using CKD-EPI equation from creatinine, age, sex, race"
+    },
+    "renal_stress_index": {
+      "provenance_label": "MODEL_ASSISTED_SYNTHESIS",
+      "rationale": "Composite index integrating renal markers and hemodynamic stress"
+    },
+    "hydration_status": {
+      "provenance_label": "CONSTRAINED_INFERENCE",
+      "rationale": "Classified from vitals patterns and subjective hydration markers"
+    },
+    "dehydration_driven_creatinine_elevation_risk": {
+      "provenance_label": "CONSTRAINED_INFERENCE",
+      "rationale": "Probability model using BUN/Cr ratio and hydration status"
+    },
+    "electrolyte_regulation_efficiency_score": {
+      "provenance_label": "CONSTRAINED_INFERENCE",
+      "rationale": "Estimated from anion gap and electrolyte balance proxies"
+    },
+    "allostatic_load_proxy": {
+      "provenance_label": "MODEL_ASSISTED_SYNTHESIS",
+      "rationale": "Multi-system stress composite aggregating metabolic, CV, inflammatory, HPA"
+    },
+    "homeostatic_resilience_score": {
+      "provenance_label": "MODEL_ASSISTED_SYNTHESIS",
+      "rationale": "Resilience score from homeostatic variability across multiple systems"
+    },
+    "recovery_capacity_score": {
+      "provenance_label": "MODEL_ASSISTED_SYNTHESIS",
+      "rationale": "Composite recovery score from sleep quality and autonomic recovery"
+    },
+    "stress_adaptation_vs_maladaptation_classifier": {
+      "provenance_label": "CONSTRAINED_INFERENCE",
+      "rationale": "Adaptive vs maladaptive classification from stress resilience trajectory"
+    },
+    "burnout_risk_trajectory": {
+      "provenance_label": "CONSTRAINED_INFERENCE",
+      "rationale": "Risk trajectory from burnout symptom clusters and autonomic patterns"
+    },
+    "physiological_age_proxy": {
+      "provenance_label": "MODEL_ASSISTED_SYNTHESIS",
+      "rationale": "Biological age composite from multi-system aging biomarkers"
+    },
+    "cardio_inflammatory_coupling_index": {
+      "provenance_label": "MODEL_ASSISTED_SYNTHESIS",
+      "rationale": "Interaction index capturing CV-inflammatory cross-talk"
+    }
+  },
+  "validation": {
+    "must_have_exactly_35_entries": true,
+    "all_metrics_must_have_provenance_label": true,
+    "provenance_label_must_match_dependency_type": true
+  }
+}

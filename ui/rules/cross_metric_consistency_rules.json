@@ -1,0 +1,377 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Cross-Metric Consistency Rules - Contradiction Detection",
+  "description": "Deterministic cross-metric consistency checks that detect contradictions and apply confidence penalties + flags (not diagnoses). Rules are auditable and domain-grounded.",
+  "version": "1.0.0",
+  "rules": [
+    {
+      "rule_id": "CONSISTENCY_INFLAMMATION_VS_RESILIENCE",
+      "description": "Flag high inflammation paired with high resilience as a contradiction requiring confidence penalty",
+      "domain": "inflammatory_comprehensive",
+      "if": [
+        {
+          "metric_id": "chronic_inflammation_index",
+          "condition": "high_band_or_high_score",
+          "threshold": 75,
+          "threshold_type": "score_or_index_above",
+          "notes": "Chronic inflammation index >= 75/100 or top band"
+        },
+        {
+          "metric_id": "homeostatic_resilience_score",
+          "condition": "high_score_or_high_band",
+          "threshold": 80,
+          "threshold_type": "score_or_index_above",
+          "notes": "Resilience score >= 80/100 or top band"
+        }
+      ],
+      "then": {
+        "flag_code": "XMETRIC_CONTRADICTION_INFLAMMATION_RESILIENCE",
+        "flag_message": "High inflammation with high resilience is physiologically inconsistent - one or both estimates may be unreliable",
+        "confidence_penalty": 0.10,
+        "actions": [
+          "add_flag",
+          "lower_confidence"
+        ],
+        "affected_metrics": [
+          "chronic_inflammation_index",
+          "homeostatic_resilience_score"
+        ]
+      }
+    },
+    {
+      "rule_id": "CONSISTENCY_RECOVERY_VS_BURNOUT",
+      "description": "Flag high recovery capacity with high burnout trajectory as inconsistent",
+      "domain": "comprehensive_endocrine",
+      "if": [
+        {
+          "metric_id": "recovery_capacity_score",
+          "condition": "high_score_or_high_band",
+          "threshold": 75,
+          "threshold_type": "score_or_index_above",
+          "notes": "Recovery capacity >= 75/100"
+        },
+        {
+          "metric_id": "burnout_risk_trajectory",
+          "condition": "worsening_or_high_risk",
+          "threshold": "high_risk_band",
+          "threshold_type": "class_match",
+          "notes": "Burnout trajectory classified as 'worsening' or 'high_risk'"
+        }
+      ],
+      "then": {
+        "flag_code": "XMETRIC_CONTRADICTION_RECOVERY_BURNOUT",
+        "flag_message": "High recovery capacity contradicts high burnout risk - temporal mismatch or data quality issue",
+        "confidence_penalty": 0.08,
+        "actions": [
+          "add_flag",
+          "lower_confidence"
+        ],
+        "affected_metrics": [
+          "recovery_capacity_score",
+          "burnout_risk_trajectory"
+        ]
+      }
+    },
+    {
+      "rule_id": "CONSISTENCY_METABOLIC_RISK_INTERNAL",
+      "description": "Flag low insulin resistance probability paired with high cardiometabolic risk score",
+      "domain": "metabolic_cardiometabolic",
+      "if": [
+        {
+          "metric_id": "insulin_resistance_probability",
+          "condition": "low_probability",
+          "threshold": 25,
+          "threshold_type": "probability_below",
+          "notes": "IR probability <= 25% or low band"
+        },
+        {
+          "metric_id": "cardiometabolic_risk_score",
+          "condition": "high_score_or_high_band",
+          "threshold": 75,
+          "threshold_type": "score_or_index_above",
+          "notes": "CM risk score >= 75/100 or high band"
+        }
+      ],
+      "then": {
+        "flag_code": "XMETRIC_CONTRADICTION_IR_CMRISK",
+        "flag_message": "Low insulin resistance with high cardiometabolic risk is inconsistent - IR may be underestimated",
+        "confidence_penalty": 0.07,
+        "actions": [
+          "add_flag",
+          "lower_confidence",
+          "widen_bounds_optional"
+        ],
+        "affected_metrics": [
+          "insulin_resistance_probability",
+          "cardiometabolic_risk_score"
+        ]
+      }
+    },
+    {
+      "rule_id": "CONSISTENCY_ALLOSTATIC_LOAD_VS_RESILIENCE",
+      "description": "Flag high allostatic load with high resilience - mutually exclusive by definition",
+      "domain": "comprehensive",
+      "if": [
+        {
+          "metric_id": "allostatic_load_proxy",
+          "condition": "high_load",
+          "threshold": 75,
+          "threshold_type": "score_or_index_above",
+          "notes": "Allostatic load >= 75/100"
+        },
+        {
+          "metric_id": "homeostatic_resilience_score",
+          "condition": "high_resilience",
+          "threshold": 80,
+          "threshold_type": "score_or_index_above",
+          "notes": "Resilience >= 80/100"
+        }
+      ],
+      "then": {
+        "flag_code": "XMETRIC_CONTRADICTION_LOAD_RESILIENCE",
+        "flag_message": "High allostatic load contradicts high resilience - these are inverse constructs",
+        "confidence_penalty": 0.12,
+        "actions": [
+          "add_flag",
+          "lower_confidence"
+        ],
+        "affected_metrics": [
+          "allostatic_load_proxy",
+          "homeostatic_resilience_score"
+        ]
+      }
+    },
+    {
+      "rule_id": "CONSISTENCY_HBA1C_VS_IR_MISMATCH",
+      "description": "Flag low HbA1c estimate with high IR probability - usually co-occur",
+      "domain": "metabolic",
+      "if": [
+        {
+          "metric_id": "estimated_hba1c_range",
+          "condition": "range_below_threshold",
+          "threshold": 5.4,
+          "threshold_type": "range_midpoint_below",
+          "notes": "HbA1c range midpoint < 5.4%"
+        },
+        {
+          "metric_id": "insulin_resistance_probability",
+          "condition": "high_probability",
+          "threshold": 70,
+          "threshold_type": "probability_above",
+          "notes": "IR probability >= 70%"
+        }
+      ],
+      "then": {
+        "flag_code": "XMETRIC_CONTRADICTION_HBA1C_IR_MISMATCH",
+        "flag_message": "Low HbA1c with high insulin resistance is unusual - may indicate data quality issue",
+        "confidence_penalty": 0.08,
+        "actions": [
+          "add_flag",
+          "lower_confidence"
+        ],
+        "affected_metrics": [
+          "estimated_hba1c_range",
+          "insulin_resistance_probability"
+        ]
+      }
+    },
+    {
+      "rule_id": "CONSISTENCY_METABOLIC_FLEXIBILITY_VS_IR",
+      "description": "Flag high metabolic flexibility with high IR - IR impairs flexibility",
+      "domain": "metabolic",
+      "if": [
+        {
+          "metric_id": "metabolic_flexibility_score",
+          "condition": "high_flexibility",
+          "threshold": 75,
+          "threshold_type": "score_or_index_above",
+          "notes": "Flexibility >= 75/100"
+        },
+        {
+          "metric_id": "insulin_resistance_probability",
+          "condition": "high_probability",
+          "threshold": 70,
+          "threshold_type": "probability_above",
+          "notes": "IR probability >= 70%"
+        }
+      ],
+      "then": {
+        "flag_code": "XMETRIC_CONTRADICTION_FLEXIBILITY_IR",
+        "flag_message": "High metabolic flexibility contradicts high insulin resistance - IR impairs fuel-switching",
+        "confidence_penalty": 0.09,
+        "actions": [
+          "add_flag",
+          "lower_confidence"
+        ],
+        "affected_metrics": [
+          "metabolic_flexibility_score",
+          "insulin_resistance_probability"
+        ]
+      }
+    },
+    {
+      "rule_id": "CONSISTENCY_SYMPATHETIC_DOM_VS_RECOVERY",
+      "description": "Flag high sympathetic dominance with high recovery capacity - recovery requires parasympathetic",
+      "domain": "endocrine_comprehensive",
+      "if": [
+        {
+          "metric_id": "sympathetic_dominance_index",
+          "condition": "high_dominance",
+          "threshold": 75,
+          "threshold_type": "score_or_index_above",
+          "notes": "Sympathetic dominance >= 75/100"
+        },
+        {
+          "metric_id": "recovery_capacity_score",
+          "condition": "high_recovery",
+          "threshold": 75,
+          "threshold_type": "score_or_index_above",
+          "notes": "Recovery capacity >= 75/100"
+        }
+      ],
+      "then": {
+        "flag_code": "XMETRIC_CONTRADICTION_SYMP_DOM_RECOVERY",
+        "flag_message": "High sympathetic dominance contradicts high recovery - recovery requires parasympathetic activation",
+        "confidence_penalty": 0.08,
+        "actions": [
+          "add_flag",
+          "lower_confidence"
+        ],
+        "affected_metrics": [
+          "sympathetic_dominance_index",
+          "recovery_capacity_score"
+        ]
+      }
+    },
+    {
+      "rule_id": "CONSISTENCY_ACUTE_INFLAM_VS_CHRONIC_LOAD",
+      "description": "Flag acute inflammation pattern with high allostatic load - allostatic load is chronic",
+      "domain": "inflammatory_comprehensive",
+      "if": [
+        {
+          "metric_id": "acute_vs_chronic_pattern_classifier",
+          "condition": "class_equals",
+          "threshold": "acute",
+          "threshold_type": "class_match",
+          "notes": "Inflammation pattern classified as 'acute'"
+        },
+        {
+          "metric_id": "allostatic_load_proxy",
+          "condition": "high_load",
+          "threshold": 75,
+          "threshold_type": "score_or_index_above",
+          "notes": "Allostatic load >= 75/100 (indicates chronic stress)"
+        }
+      ],
+      "then": {
+        "flag_code": "XMETRIC_CONTRADICTION_ACUTE_INFLAM_CHRONIC_LOAD",
+        "flag_message": "Acute inflammation pattern contradicts high allostatic load - allostatic load implies chronic stress",
+        "confidence_penalty": 0.07,
+        "actions": [
+          "add_flag",
+          "lower_confidence"
+        ],
+        "affected_metrics": [
+          "acute_vs_chronic_pattern_classifier",
+          "allostatic_load_proxy"
+        ]
+      }
+    },
+    {
+      "rule_id": "CONSISTENCY_RENAL_STRESS_VS_HYDRATION",
+      "description": "Flag high renal stress with good hydration status - dehydration often drives renal stress",
+      "domain": "renal",
+      "if": [
+        {
+          "metric_id": "renal_stress_index",
+          "condition": "high_stress",
+          "threshold": 75,
+          "threshold_type": "score_or_index_above",
+          "notes": "Renal stress >= 75/100"
+        },
+        {
+          "metric_id": "hydration_status",
+          "condition": "class_equals",
+          "threshold": "well_hydrated",
+          "threshold_type": "class_match",
+          "notes": "Hydration status classified as 'well_hydrated' or 'optimal'"
+        }
+      ],
+      "then": {
+        "flag_code": "XMETRIC_CONTRADICTION_RENAL_STRESS_HYDRATION",
+        "flag_message": "High renal stress with good hydration is unusual - may indicate intrinsic renal issue or data mismatch",
+        "confidence_penalty": 0.06,
+        "actions": [
+          "add_flag",
+          "lower_confidence"
+        ],
+        "affected_metrics": [
+          "renal_stress_index",
+          "hydration_status"
+        ]
+      }
+    },
+    {
+      "rule_id": "CONSISTENCY_LIPID_ATHEROGENIC_VS_IR",
+      "description": "Flag low atherogenic risk with high IR - IR typically drives atherogenic dyslipidemia",
+      "domain": "lipid_metabolic",
+      "if": [
+        {
+          "metric_id": "atherogenic_risk_phenotype",
+          "condition": "class_equals",
+          "threshold": "low_risk",
+          "threshold_type": "class_match",
+          "notes": "Atherogenic phenotype classified as 'low_risk' or 'favorable'"
+        },
+        {
+          "metric_id": "insulin_resistance_probability",
+          "condition": "high_probability",
+          "threshold": 70,
+          "threshold_type": "probability_above",
+          "notes": "IR probability >= 70%"
+        }
+      ],
+      "then": {
+        "flag_code": "XMETRIC_CONTRADICTION_ATHEROGENIC_IR",
+        "flag_message": "Low atherogenic risk contradicts high insulin resistance - IR typically drives dyslipidemia",
+        "confidence_penalty": 0.08,
+        "actions": [
+          "add_flag",
+          "lower_confidence"
+        ],
+        "affected_metrics": [
+          "atherogenic_risk_phenotype",
+          "insulin_resistance_probability"
+        ]
+      }
+    }
+  ],
+  "threshold_interpretation_guide": {
+    "score_or_index_above": "For 0-100 composite scores, check if value >= threshold",
+    "score_or_index_below": "For 0-100 composite scores, check if value < threshold",
+    "probability_above": "For probability percentages, check if value >= threshold",
+    "probability_below": "For probability percentages, check if value < threshold",
+    "range_midpoint_above": "For lab range proxies, check if (low + high) / 2 >= threshold",
+    "range_midpoint_below": "For lab range proxies, check if (low + high) / 2 < threshold",
+    "class_match": "For classifications, check if label matches threshold string (case-insensitive)"
+  },
+  "evaluation_logic": {
+    "description": "Cross-metric checks run post-render-normalization but pre-final card emission",
+    "steps": [
+      "1. For each rule, check if all 'if' conditions are satisfied",
+      "2. If all conditions true, apply 'then' actions",
+      "3. Log flag to explanation_trace for affected metrics",
+      "4. Apply confidence penalty to affected metrics",
+      "5. Optionally widen bounds if action includes 'widen_bounds_optional'"
+    ]
+  },
+  "audit_requirements": {
+    "must_log_per_metric": [
+      "Rule IDs triggered",
+      "Flag codes added",
+      "Confidence penalties applied",
+      "Final confidence after penalties"
+    ],
+    "trace_field": "cross_metric_consistency"
+  }
+}
